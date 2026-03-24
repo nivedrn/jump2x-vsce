@@ -17,40 +17,40 @@ export function registerCommands(
   discoveryService: DiscoveryService
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('snap2x.addCurrentWorkspace', async (target?: WorkspaceTreeItem) => {
+    vscode.commands.registerCommand('leap.addCurrentWorkspace', async (target?: WorkspaceTreeItem) => {
       await addCurrentWorkspace(storageManager, provider, target);
     }),
-    vscode.commands.registerCommand('snap2x.openWorkspace', async (target?: WorkspaceTreeItem) => {
+    vscode.commands.registerCommand('leap.openWorkspace', async (target?: WorkspaceTreeItem) => {
       if (!target) {
         return;
       }
       await openWorkspace(target);
     }),
-    vscode.commands.registerCommand('snap2x.removeFavorite', async (target?: WorkspaceTreeItem) => {
+    vscode.commands.registerCommand('leap.removeFavorite', async (target?: WorkspaceTreeItem) => {
       if (!target) {
         return;
       }
       await removeFavorite(storageManager, provider, target);
     }),
-    vscode.commands.registerCommand('snap2x.refreshWorkspaces', async () => {
+    vscode.commands.registerCommand('leap.refreshWorkspaces', async () => {
       await refresh(provider);
     }),
-    vscode.commands.registerCommand('snap2x.hideWorkspace', async (target?: WorkspaceTreeItem) => {
+    vscode.commands.registerCommand('leap.hideWorkspace', async (target?: WorkspaceTreeItem) => {
       if (!target) {
         return;
       }
       await hideWorkspace(storageManager, provider, target);
     }),
-    vscode.commands.registerCommand('snap2x.restoreWorkspace', async (target?: WorkspaceTreeItem) => {
+    vscode.commands.registerCommand('leap.restoreWorkspace', async (target?: WorkspaceTreeItem) => {
       if (!target) {
         return;
       }
       await restoreWorkspace(storageManager, provider, target);
     }),
-    vscode.commands.registerCommand('snap2x.openSettings', async () => {
-      await vscode.commands.executeCommand('workbench.action.openSettings', 'snap2x');
+    vscode.commands.registerCommand('leap.openSettings', async () => {
+      await vscode.commands.executeCommand('workbench.action.openSettings', 'leap');
     }),
-    vscode.commands.registerCommand('snap2x.quickOpenWorkspace', async () => {
+    vscode.commands.registerCommand('leap.quickOpenWorkspace', async () => {
       await quickOpenWorkspace(storageManager, discoveryService);
     })
   );

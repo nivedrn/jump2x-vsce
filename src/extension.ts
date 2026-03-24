@@ -9,7 +9,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const discoveryService = new DiscoveryService();
   const provider = new WorkspaceTreeProvider(storageManager, discoveryService);
 
-  const treeView = vscode.window.createTreeView('snap2x.workspaceExplorer', {
+  const treeView = vscode.window.createTreeView('leap.workspaceExplorer', {
     treeDataProvider: provider,
     showCollapseAll: true,
   });
@@ -20,10 +20,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     treeView,
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (
-        event.affectsConfiguration('snap2x.workspacesDirectories') ||
-        event.affectsConfiguration('snap2x.excludedDirectories') ||
-        event.affectsConfiguration('snap2x.recursiveScan') ||
-        event.affectsConfiguration('snap2x.includeCodeWorkspaceFiles')
+        event.affectsConfiguration('leap.workspacesDirectories') ||
+        event.affectsConfiguration('leap.excludedDirectories') ||
+        event.affectsConfiguration('leap.recursiveScan') ||
+        event.affectsConfiguration('leap.includeCodeWorkspaceFiles')
       ) {
         await provider.refresh();
       }
@@ -32,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const pruned = await storageManager.clearMissingFavorites();
   if (pruned > 0) {
-    vscode.window.setStatusBarMessage(`Snap2x removed ${pruned} missing favorite(s).`, 3000);
+    vscode.window.setStatusBarMessage(`Leap removed ${pruned} missing favorite(s).`, 3000);
   }
 
   await provider.refresh();

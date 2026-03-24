@@ -3,5 +3,5 @@ out/test/**
 src/**
 .gitignore
 test/**
-plan-snap2x.prompt.md
+plan-leap.prompt.md
 tsconfig.json

@@ -1,6 +1,6 @@
 {
-  "name": "snap2x",
-  "displayName": "Snap2x",
+  "name": "leap",
+  "displayName": "Leap",
   "description": "Quickly open and manage favorite and discovered workspaces.",
   "version": "1.0.0",
   "publisher": "devn",
@@ -11,77 +11,77 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:snap2x.workspaceExplorer",
-    "onCommand:snap2x.quickOpenWorkspace",
-    "onCommand:snap2x.addCurrentWorkspace",
-    "onCommand:snap2x.refreshWorkspaces",
-    "onCommand:snap2x.openWorkspace",
-    "onCommand:snap2x.removeFavorite",
-    "onCommand:snap2x.hideWorkspace",
-    "onCommand:snap2x.restoreWorkspace",
-    "onCommand:snap2x.openSettings"
+    "onView:leap.workspaceExplorer",
+    "onCommand:leap.quickOpenWorkspace",
+    "onCommand:leap.addCurrentWorkspace",
+    "onCommand:leap.refreshWorkspaces",
+    "onCommand:leap.openWorkspace",
+    "onCommand:leap.removeFavorite",
+    "onCommand:leap.hideWorkspace",
+    "onCommand:leap.restoreWorkspace",
+    "onCommand:leap.openSettings"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "views": {
       "explorer": [
         {
-          "id": "snap2x.workspaceExplorer",
-          "name": "Snap2x"
+          "id": "leap.workspaceExplorer",
+          "name": "Leap"
         }
       ]
     },
     "commands": [
       {
-        "command": "snap2x.addCurrentWorkspace",
-        "title": "Snap2x: Add Current Workspace to Favorites",
-        "category": "Snap2x",
+        "command": "leap.addCurrentWorkspace",
+        "title": "Leap: Add Current Workspace to Favorites",
+        "category": "Leap",
         "icon": "$(star-add)"
       },
       {
-        "command": "snap2x.refreshWorkspaces",
-        "title": "Snap2x: Refresh Workspaces",
-        "category": "Snap2x",
+        "command": "leap.refreshWorkspaces",
+        "title": "Leap: Refresh Workspaces",
+        "category": "Leap",
         "icon": "$(refresh)"
       },
       {
-        "command": "snap2x.openWorkspace",
-        "title": "Snap2x: Open Workspace",
-        "category": "Snap2x"
+        "command": "leap.openWorkspace",
+        "title": "Leap: Open Workspace",
+        "category": "Leap"
       },
       {
-        "command": "snap2x.removeFavorite",
-        "title": "Snap2x: Remove Favorite",
-        "category": "Snap2x",
+        "command": "leap.removeFavorite",
+        "title": "Leap: Remove Favorite",
+        "category": "Leap",
         "icon": "$(trash)"
       },
       {
-        "command": "snap2x.hideWorkspace",
-        "title": "Snap2x: Hide Workspace",
-        "category": "Snap2x",
+        "command": "leap.hideWorkspace",
+        "title": "Leap: Hide Workspace",
+        "category": "Leap",
         "icon": "$(eye-closed)"
       },
       {
-        "command": "snap2x.restoreWorkspace",
-        "title": "Snap2x: Restore Workspace",
-        "category": "Snap2x",
+        "command": "leap.restoreWorkspace",
+        "title": "Leap: Restore Workspace",
+        "category": "Leap",
         "icon": "$(eye)"
       },
       {
-        "command": "snap2x.openSettings",
-        "title": "Snap2x: Open Settings",
-        "category": "Snap2x",
+        "command": "leap.openSettings",
+        "title": "Leap: Open Settings",
+        "category": "Leap",
         "icon": "$(gear)"
       },
       {
-        "command": "snap2x.quickOpenWorkspace",
-        "title": "Snap2x: Quick Open Workspace",
-        "category": "Snap2x"
+        "command": "leap.quickOpenWorkspace",
+        "title": "Leap: Quick Open Workspace",
+        "category": "Leap"
       }
     ],
     "keybindings": [
       {
-        "command": "snap2x.quickOpenWorkspace",
+        "command": "leap.quickOpenWorkspace",
         "key": "ctrl+shift+k",
         "mac": "cmd+shift+k"
       }
@@ -89,83 +89,83 @@
     "menus": {
       "view/title": [
         {
-          "command": "snap2x.addCurrentWorkspace",
-          "when": "view == snap2x.workspaceExplorer",
+          "command": "leap.addCurrentWorkspace",
+          "when": "view == leap.workspaceExplorer",
           "group": "navigation@1"
         },
         {
-          "command": "snap2x.refreshWorkspaces",
-          "when": "view == snap2x.workspaceExplorer",
+          "command": "leap.refreshWorkspaces",
+          "when": "view == leap.workspaceExplorer",
           "group": "navigation@2"
         },
         {
-          "command": "snap2x.openSettings",
-          "when": "view == snap2x.workspaceExplorer",
+          "command": "leap.openSettings",
+          "when": "view == leap.workspaceExplorer",
           "group": "navigation@3"
         }
       ],
       "view/item/context": [
         {
-          "command": "snap2x.removeFavorite",
-          "when": "view == snap2x.workspaceExplorer && viewItem == favoriteWorkspace",
+          "command": "leap.removeFavorite",
+          "when": "view == leap.workspaceExplorer && viewItem == favoriteWorkspace",
           "group": "inline"
         },
         {
-          "command": "snap2x.addCurrentWorkspace",
-          "when": "view == snap2x.workspaceExplorer && viewItem == discoveredWorkspace",
+          "command": "leap.addCurrentWorkspace",
+          "when": "view == leap.workspaceExplorer && viewItem == discoveredWorkspace",
           "group": "inline"
         },
         {
-          "command": "snap2x.hideWorkspace",
-          "when": "view == snap2x.workspaceExplorer && viewItem == discoveredWorkspace",
+          "command": "leap.hideWorkspace",
+          "when": "view == leap.workspaceExplorer && viewItem == discoveredWorkspace",
           "group": "inline"
         },
         {
-          "command": "snap2x.restoreWorkspace",
-          "when": "view == snap2x.workspaceExplorer && viewItem == hiddenWorkspace",
+          "command": "leap.restoreWorkspace",
+          "when": "view == leap.workspaceExplorer && viewItem == hiddenWorkspace",
           "group": "inline"
         }
       ],
       "commandPalette": [
         {
-          "command": "snap2x.openWorkspace",
+          "command": "leap.openWorkspace",
           "when": "false"
         },
         {
-          "command": "snap2x.removeFavorite",
+          "command": "leap.removeFavorite",
           "when": "false"
         },
         {
-          "command": "snap2x.hideWorkspace",
+          "command": "leap.hideWorkspace",
           "when": "false"
         },
         {
-          "command": "snap2x.restoreWorkspace",
+          "command": "leap.restoreWorkspace",
           "when": "false"
         }
       ]
     },
     "configuration": {
-      "title": "Snap2x",
+      "title": "Leap",
       "properties": {
-        "snap2x.workspacesDirectories": {
+        "leap.workspacesDirectories": {
           "type": "array",
           "items": { "type": "string" },
           "default": [],
           "description": "Directories to scan for git repositories and .code-workspace files. Supports multiple paths."
         },
-        "snap2x.excludedDirectories": {
+        "leap.excludedDirectories": {
           "type": "array",
           "items": { "type": "string" },
           "default": [],
           "description": "Directories to skip during scanning. Full paths that the scanner should not traverse."
         },
-        "snap2x.recursiveScan": {
+        "leap.recursiveScan": {
           "type": "boolean",
           "default": true,
           "description": "Recursively scan nested folders in workspacesDirectories."
         },
-        "snap2x.includeCodeWorkspaceFiles": {
+        "leap.includeCodeWorkspaceFiles": {
           "type": "boolean",
           "default": true,
           "description": "Include discovered .code-workspace files."

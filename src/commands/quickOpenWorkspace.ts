@@ -78,7 +78,7 @@ function buildQuickPickItems(
     items.push({
       label: includeDiscoveryPlaceholder
         ? 'Discovering workspaces...'
-        : warning ?? 'No discovered workspaces. Configure snap2x.workspacesDirectories.',
+        : warning ?? 'No discovered workspaces. Configure leap.workspacesDirectories.',
       section: 'placeholder',
     });
   } else {

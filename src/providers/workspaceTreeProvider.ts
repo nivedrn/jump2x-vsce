@@ -4,9 +4,9 @@ import { StorageManager } from '../storage/storageManager';
 import { DiscoveredWorkspace, FavoriteWorkspace, HiddenWorkspace, WorkspaceItemKind } from '../types';
 import { workspacePathKey } from '../utils/pathUtils';
 
-const FAVORITES_SECTION_ID = 'snap2x:favorites';
-const DISCOVERED_SECTION_ID = 'snap2x:discovered';
-const HIDDEN_SECTION_ID = 'snap2x:hidden';
+const FAVORITES_SECTION_ID = 'leap:favorites';
+const DISCOVERED_SECTION_ID = 'leap:discovered';
+const HIDDEN_SECTION_ID = 'leap:hidden';
 
 export interface WorkspaceNodeData {
   kind: WorkspaceItemKind;
@@ -29,7 +29,7 @@ export class WorkspaceTreeItem extends vscode.TreeItem {
       this.tooltip = node.path;
       this.description = node.path;
       this.command = {
-        command: 'snap2x.openWorkspace',
+        command: 'leap.openWorkspace',
         title: 'Open Workspace',
         arguments: [this],
       };
@@ -130,7 +130,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
 
     if (favorites.length === 0) {
       return [
-        this.makePlaceholder('No favorites yet. Use "Add Current Workspace to Favorites".', 'snap2x:favorites:empty'),
+        this.makePlaceholder('No favorites yet. Use "Add Current Workspace to Favorites".', 'leap:favorites:empty'),
       ];
     }
 
@@ -145,8 +145,8 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
     );
 
     if (discoveredOnly.length === 0) {
-      const label = this.warningMessage ?? 'No discovered workspaces. Configure snap2x.workspacesDirectories.';
-      return [this.makePlaceholder(label, 'snap2x:discovered:empty')];
+      const label = this.warningMessage ?? 'No discovered workspaces. Configure leap.workspacesDirectories.';
+      return [this.makePlaceholder(label, 'leap:discovered:empty')];
     }
 
     return discoveredOnly.map((item) => this.discoveredToTreeItem(item));
@@ -156,7 +156,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
     const hidden = this.storageManager.getHidden().sort((a, b) => a.label.localeCompare(b.label));
 
     if (hidden.length === 0) {
-      return [this.makePlaceholder('No hidden workspaces.', 'snap2x:hidden:empty')];
+      return [this.makePlaceholder('No hidden workspaces.', 'leap:hidden:empty')];
     }
 
     return hidden.map((item) => this.hiddenToTreeItem(item));
@@ -165,7 +165,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
   private favoriteToTreeItem(favorite: FavoriteWorkspace): WorkspaceTreeItem {
     return new WorkspaceTreeItem(
       {
-        id: `snap2x:favorite:${favorite.path}`,
+        id: `leap:favorite:${favorite.path}`,
         kind: 'favoriteWorkspace',
         label: favorite.label,
         uri: vscode.Uri.parse(favorite.uri),
@@ -178,7 +178,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
   private hiddenToTreeItem(item: HiddenWorkspace): WorkspaceTreeItem {
     return new WorkspaceTreeItem(
       {
-        id: `snap2x:hidden:${item.path}`,
+        id: `leap:hidden:${item.path}`,
         kind: 'hiddenWorkspace',
         label: item.label,
         uri: vscode.Uri.parse(item.uri),
@@ -191,7 +191,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
   private discoveredToTreeItem(item: DiscoveredWorkspace): WorkspaceTreeItem {
     return new WorkspaceTreeItem(
       {
-        id: `snap2x:discovered:${item.path}`,
+        id: `leap:discovered:${item.path}`,
         kind: 'discoveredWorkspace',
         label: item.label,
         uri: vscode.Uri.parse(item.uri),

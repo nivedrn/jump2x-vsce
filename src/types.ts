@@ -20,15 +20,15 @@ export interface HiddenWorkspace {
   label: string;
 }
 
-export interface Snap2xSettings {
+export interface LeapSettings {
   workspacesDirectories: string[];
   excludedDirectories: string[];
   recursiveScan: boolean;
   includeCodeWorkspaceFiles: boolean;
 }
 
-export const FAVORITES_STORAGE_KEY = 'snap2x.favorites';
-export const HIDDEN_STORAGE_KEY = 'snap2x.hidden';
+export const FAVORITES_STORAGE_KEY = 'leap.favorites';
+export const HIDDEN_STORAGE_KEY = 'leap.hidden';
 
 export type WorkspaceItemKind =
   | 'favoritesRoot'
