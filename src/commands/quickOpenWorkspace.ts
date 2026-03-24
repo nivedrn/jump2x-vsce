@@ -88,7 +88,7 @@ function buildQuickPickItems(
     items.push({
       label: includeDiscoveryPlaceholder
         ? 'Discovering workspaces...'
-        : warning ?? 'No discovered workspaces. Configure leap.workspacesDirectories.',
+        : warning ?? 'No discovered workspaces. Configure jump2x.workspacesDirectories.',
       section: 'placeholder',
     });
   } else {

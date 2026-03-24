@@ -9,7 +9,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const discoveryService = new DiscoveryService();
   const provider = new WorkspaceTreeProvider(storageManager, discoveryService);
 
-  const treeView = vscode.window.createTreeView('leap.workspaceExplorer', {
+  const treeView = vscode.window.createTreeView('jump2x.workspaceExplorer', {
     treeDataProvider: provider,
     showCollapseAll: true,
   });
@@ -20,11 +20,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     treeView,
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (
-        event.affectsConfiguration('leap.workspacesDirectories') ||
-        event.affectsConfiguration('leap.excludedDirectories') ||
-        event.affectsConfiguration('leap.recursiveScan') ||
-        event.affectsConfiguration('leap.maxScanDepth') ||
-        event.affectsConfiguration('leap.includeCodeWorkspaceFiles')
+        event.affectsConfiguration('jump2x.workspacesDirectories') ||
+        event.affectsConfiguration('jump2x.excludedDirectories') ||
+        event.affectsConfiguration('jump2x.recursiveScan') ||
+        event.affectsConfiguration('jump2x.maxScanDepth') ||
+        event.affectsConfiguration('jump2x.includeCodeWorkspaceFiles')
       ) {
         await provider.refresh();
       }
@@ -33,7 +33,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const pruned = await storageManager.clearMissingFavorites();
   if (pruned > 0) {
-    vscode.window.setStatusBarMessage(`Leap removed ${pruned} missing favorite(s).`, 3000);
+    vscode.window.setStatusBarMessage(`Jump2X removed ${pruned} missing favorite(s).`, 3000);
   }
 
   await provider.refresh();

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { LeapSettings, DiscoveredWorkspace } from '../types';
+import { Jump2xSettings, DiscoveredWorkspace } from '../types';
 import { isCodeWorkspaceFile, isGitRepository, isIgnoredDirectory, shouldTraverseDirectory } from '../utils/discoveryUtils';
 import { workspacePathKey } from '../utils/pathUtils';
 
@@ -10,8 +10,8 @@ interface DirectoryQueueItem {
 }
 
 export class DiscoveryService {
-  public getSettings(): LeapSettings {
-    const config = vscode.workspace.getConfiguration('leap');
+  public getSettings(): Jump2xSettings {
+    const config = vscode.workspace.getConfiguration('jump2x');
 
     const workspacesDirectories = config
       .get<string[]>('workspacesDirectories', [])
@@ -56,7 +56,7 @@ export class DiscoveryService {
 
   private async scanRoot(
     root: vscode.Uri,
-    settings: LeapSettings,
+    settings: Jump2xSettings,
     dedup: Map<string, DiscoveredWorkspace>,
     excludedKeys: Set<string>
   ): Promise<void> {

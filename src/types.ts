@@ -20,7 +20,7 @@ export interface HiddenWorkspace {
   label: string;
 }
 
-export interface LeapSettings {
+export interface Jump2xSettings {
   workspacesDirectories: string[];
   excludedDirectories: string[];
   recursiveScan: boolean;
@@ -28,8 +28,8 @@ export interface LeapSettings {
   includeCodeWorkspaceFiles: boolean;
 }
 
-export const FAVORITES_STORAGE_KEY = 'leap.favorites';
-export const HIDDEN_STORAGE_KEY = 'leap.hidden';
+export const FAVORITES_STORAGE_KEY = 'jump2x.favorites';
+export const HIDDEN_STORAGE_KEY = 'jump2x.hidden';
 
 export type WorkspaceItemKind =
   | 'favoritesRoot'
