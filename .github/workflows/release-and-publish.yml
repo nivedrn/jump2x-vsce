@@ -1,0 +1,90 @@
+name: Release and Publish Extension
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          EXT_ID=$(node -p "const p=require('./package.json'); `${p.publisher}.${p.name}`")
+          TAG="v${VERSION}"
+          VSIX_FILE="jump2x-${VERSION}.vsix"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "extension_id=$EXT_ID" >> "$GITHUB_OUTPUT"
+          echo "vsix_file=$VSIX_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Detect existing GitHub release and Marketplace version
+        id: detect
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          EXT_ID="${{ steps.meta.outputs.extension_id }}"
+          VERSION="${{ steps.meta.outputs.version }}"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if npx vsce show "${EXT_ID}@${VERSION}" >/dev/null 2>&1; then
+            echo "marketplace_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "marketplace_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip duplicate release and publish
+        if: steps.detect.outputs.release_exists == 'true' && steps.detect.outputs.marketplace_exists == 'true'
+        run: echo "Version ${{ steps.meta.outputs.version }} already released and published. Skipping."
+
+      - name: Package VSIX
+        if: steps.detect.outputs.release_exists != 'true' || steps.detect.outputs.marketplace_exists != 'true'
+        run: npm run package:vsix
+
+      - name: Create GitHub release
+        if: steps.detect.outputs.release_exists != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: main
+          name: ${{ steps.meta.outputs.tag }}
+          generate_release_notes: true
+          files: ${{ steps.meta.outputs.vsix_file }}
+
+      - name: Publish to VS Code Marketplace
+        if: steps.detect.outputs.marketplace_exists != 'true'
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "Missing VSCE_PAT secret. Add it in repository secrets before publishing."
+            exit 1
+          fi
+          npx vsce publish --packagePath "${{ steps.meta.outputs.vsix_file }}" -p "$VSCE_PAT"

@@ -33,7 +33,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const pruned = await storageManager.clearMissingFavorites();
   if (pruned > 0) {
-    vscode.window.setStatusBarMessage(`Jump2X removed ${pruned} missing favorite(s).`, 3000);
+    vscode.window.setStatusBarMessage(`Jump2x removed ${pruned} missing favorite(s).`, 3000);
   }
 
   await provider.refresh();

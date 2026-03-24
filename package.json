@@ -1,6 +1,6 @@
 {
   "name": "jump2x",
-  "displayName": "Jump2X",
+  "displayName": "Jump2x",
   "description": "Quickly open and manage favorite and discovered workspaces.",
   "version": "1.0.0",
   "publisher": "devn",
@@ -28,56 +28,56 @@
       "explorer": [
         {
           "id": "jump2x.workspaceExplorer",
-          "name": "Jump2X"
+          "name": "Jump2x"
         }
       ]
     },
     "commands": [
       {
         "command": "jump2x.addCurrentWorkspace",
-        "title": "Jump2X: Add Current Workspace to Favorites",
-        "category": "Jump2X",
+        "title": "Jump2x: Add Current Workspace to Favorites",
+        "category": "Jump2x",
         "icon": "$(star-add)"
       },
       {
         "command": "jump2x.refreshWorkspaces",
-        "title": "Jump2X: Refresh Workspaces",
-        "category": "Jump2X",
+        "title": "Jump2x: Refresh Workspaces",
+        "category": "Jump2x",
         "icon": "$(refresh)"
       },
       {
         "command": "jump2x.openWorkspace",
-        "title": "Jump2X: Open Workspace",
-        "category": "Jump2X"
+        "title": "Jump2x: Open Workspace",
+        "category": "Jump2x"
       },
       {
         "command": "jump2x.removeFavorite",
-        "title": "Jump2X: Remove Favorite",
-        "category": "Jump2X",
+        "title": "Jump2x: Remove Favorite",
+        "category": "Jump2x",
         "icon": "$(trash)"
       },
       {
         "command": "jump2x.hideWorkspace",
-        "title": "Jump2X: Hide Workspace",
-        "category": "Jump2X",
+        "title": "Jump2x: Hide Workspace",
+        "category": "Jump2x",
         "icon": "$(eye-closed)"
       },
       {
         "command": "jump2x.restoreWorkspace",
-        "title": "Jump2X: Restore Workspace",
-        "category": "Jump2X",
+        "title": "Jump2x: Restore Workspace",
+        "category": "Jump2x",
         "icon": "$(eye)"
       },
       {
         "command": "jump2x.openSettings",
-        "title": "Jump2X: Open Settings",
-        "category": "Jump2X",
+        "title": "Jump2x: Open Settings",
+        "category": "Jump2x",
         "icon": "$(gear)"
       },
       {
         "command": "jump2x.quickOpenWorkspace",
-        "title": "Jump2X: Quick Open Workspace",
-        "category": "Jump2X"
+        "title": "Jump2x: Quick Open Workspace",
+        "category": "Jump2x"
       }
     ],
     "keybindings": [
@@ -147,7 +147,7 @@
       ]
     },
     "configuration": {
-      "title": "Jump2X",
+      "title": "Jump2x",
       "properties": {
         "jump2x.workspacesDirectories": {
           "type": "array",
