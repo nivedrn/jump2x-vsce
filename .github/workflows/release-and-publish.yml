@@ -60,12 +60,7 @@ jobs:
             echo "marketplace_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Skip duplicate release and publish
-        if: steps.detect.outputs.release_exists == 'true' && steps.detect.outputs.marketplace_exists == 'true'
-        run: echo "Version ${{ steps.meta.outputs.version }} already released and published. Skipping."
-
       - name: Package VSIX
-        if: steps.detect.outputs.release_exists != 'true' || steps.detect.outputs.marketplace_exists != 'true'
         run: npm run package:vsix
 
       - name: Create GitHub release
@@ -79,10 +74,14 @@ jobs:
           files: ${{ steps.meta.outputs.vsix_file }}
 
       - name: Publish to VS Code Marketplace
-        if: steps.detect.outputs.marketplace_exists != 'true'
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
+          if [ "${{ steps.detect.outputs.marketplace_exists }}" = "true" ]; then
+            echo "Version ${{ steps.meta.outputs.version }} is already published to Marketplace."
+            echo "Bump package.json version before pushing to main to publish an update."
+            exit 1
+          fi
           if [ -z "$VSCE_PAT" ]; then
             echo "Missing VSCE_PAT secret. Add it in repository secrets before publishing."
             exit 1
