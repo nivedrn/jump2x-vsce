@@ -27,6 +27,14 @@ interface WorkspaceQuickPickItem extends vscode.QuickPickItem {
   buttons?: vscode.QuickInputButton[];
 }
 
+function isCodeWorkspacePath(value: string): boolean {
+  return value.toLowerCase().endsWith('.code-workspace');
+}
+
+function workspaceLabelIcon(isCodeWorkspaceFile: boolean): string {
+  return isCodeWorkspaceFile ? '$(file-code)' : '$(repo)';
+}
+
 function buildQuickPickItems(
   favorites: FavoriteWorkspace[],
   discovered: DiscoveredWorkspace[],
@@ -51,8 +59,9 @@ function buildQuickPickItems(
     });
   } else {
     for (const favorite of favorites) {
+      const isCodeWorkspaceFile = isCodeWorkspacePath(favorite.path);
       items.push({
-        label: `${n++} $(star-full) ${favorite.label}`,
+        label: `${n++} ${workspaceLabelIcon(isCodeWorkspaceFile)} ${favorite.label}`,
         description: favorite.path,
         path: favorite.path,
         uri: vscode.Uri.parse(favorite.uri),
@@ -85,7 +94,7 @@ function buildQuickPickItems(
   } else {
     for (const item of discoveredOnly) {
       items.push({
-        label: `${n++} $(folder-opened) ${item.label}`,
+        label: `${n++} ${workspaceLabelIcon(item.isCodeWorkspaceFile)} ${item.label}`,
         description: item.path,
         path: item.path,
         uri: vscode.Uri.parse(item.uri),
