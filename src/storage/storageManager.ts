@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FAVORITES_STORAGE_KEY, FavoriteWorkspace } from '../types';
+import { FAVORITES_STORAGE_KEY, HIDDEN_STORAGE_KEY, FavoriteWorkspace, HiddenWorkspace } from '../types';
 import { normalizeWorkspacePath, sameWorkspacePath } from '../utils/pathUtils';
 
 export class StorageManager {
@@ -77,6 +77,46 @@ export class StorageManager {
     }
 
     return removedCount;
+  }
+
+  public getHidden(): HiddenWorkspace[] {
+    const stored = this.context.globalState.get<HiddenWorkspace[]>(HIDDEN_STORAGE_KEY, []);
+    if (!Array.isArray(stored)) {
+      return [];
+    }
+
+    return stored
+      .filter((entry) => typeof entry?.path === 'string' && typeof entry?.uri === 'string')
+      .map((entry) => ({
+        path: normalizeWorkspacePath(entry.path),
+        uri: entry.uri,
+        label: entry.label || path.basename(entry.path) || entry.path,
+      }));
+  }
+
+  public async hideWorkspace(item: HiddenWorkspace): Promise<void> {
+    const normalized = normalizeWorkspacePath(item.path);
+    const hidden = this.getHidden();
+
+    if (hidden.some((h) => sameWorkspacePath(h.path, normalized))) {
+      return;
+    }
+
+    hidden.push({ ...item, path: normalized });
+    await this.context.globalState.update(HIDDEN_STORAGE_KEY, hidden);
+  }
+
+  public async restoreWorkspace(workspacePath: string): Promise<boolean> {
+    const normalized = normalizeWorkspacePath(workspacePath);
+    const hidden = this.getHidden();
+    const filtered = hidden.filter((h) => !sameWorkspacePath(h.path, normalized));
+
+    if (filtered.length === hidden.length) {
+      return false;
+    }
+
+    await this.context.globalState.update(HIDDEN_STORAGE_KEY, filtered);
+    return true;
   }
 
   private async workspaceExists(uri: vscode.Uri): Promise<boolean> {

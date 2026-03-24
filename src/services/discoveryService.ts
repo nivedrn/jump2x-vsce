@@ -12,8 +12,18 @@ interface DirectoryQueueItem {
 export class DiscoveryService {
   public getSettings(): Snap2xSettings {
     const config = vscode.workspace.getConfiguration('snap2x');
+
+    const workspacesDirectories = config
+      .get<string[]>('workspacesDirectories', [])
+      .map((d) => d.trim())
+      .filter(Boolean);
+
     return {
-      workspacesDirectory: config.get<string>('workspacesDirectory', '').trim(),
+      workspacesDirectories,
+      excludedDirectories: config
+        .get<string[]>('excludedDirectories', [])
+        .map((d) => d.trim())
+        .filter(Boolean),
       recursiveScan: config.get<boolean>('recursiveScan', true),
       includeCodeWorkspaceFiles: config.get<boolean>('includeCodeWorkspaceFiles', true),
     };
@@ -22,21 +32,35 @@ export class DiscoveryService {
   public async discoverWorkspaces(): Promise<{ items: DiscoveredWorkspace[]; warning?: string }> {
     const settings = this.getSettings();
 
-    if (!settings.workspacesDirectory) {
+    if (settings.workspacesDirectories.length === 0) {
       return { items: [] };
     }
 
-    const root = vscode.Uri.file(settings.workspacesDirectory);
-    const rootExists = await this.pathExists(root);
-    if (!rootExists) {
-      return {
-        items: [],
-        warning: `Configured path does not exist: ${settings.workspacesDirectory}`,
-      };
+    const dedup = new Map<string, DiscoveredWorkspace>();
+    const excludedKeys = new Set(settings.excludedDirectories.map((d) => workspacePathKey(d)));
+    const warnings: string[] = [];
+
+    for (const rootPath of settings.workspacesDirectories) {
+      const root = vscode.Uri.file(rootPath);
+      if (!(await this.pathExists(root))) {
+        warnings.push(`Configured path does not exist: ${rootPath}`);
+        continue;
+      }
+      await this.scanRoot(root, settings, dedup, excludedKeys);
     }
 
-    const dedup = new Map<string, DiscoveredWorkspace>();
+    const items = Array.from(dedup.values()).sort((a, b) => a.label.localeCompare(b.label));
+    return { items, warning: warnings.length > 0 ? warnings.join('\n') : undefined };
+  }
+
+  private async scanRoot(
+    root: vscode.Uri,
+    settings: Snap2xSettings,
+    dedup: Map<string, DiscoveredWorkspace>,
+    excludedKeys: Set<string>
+  ): Promise<void> {
     const queue: DirectoryQueueItem[] = [{ uri: root, depth: 0 }];
+
     while (queue.length > 0) {
       const current = queue.shift();
       if (!current) {
@@ -66,7 +90,11 @@ export class DiscoveryService {
         const childPath = path.normalize(childUri.fsPath);
 
         if (fileType === vscode.FileType.Directory) {
-          if (shouldTraverseDirectory(current.depth, settings.recursiveScan) && !isIgnoredDirectory(name)) {
+          if (
+            shouldTraverseDirectory(current.depth, settings.recursiveScan) &&
+            !isIgnoredDirectory(name) &&
+            !excludedKeys.has(workspacePathKey(childPath))
+          ) {
             queue.push({ uri: childUri, depth: current.depth + 1 });
           }
         }
@@ -85,9 +113,6 @@ export class DiscoveryService {
         }
       }
     }
-
-    const items = Array.from(dedup.values()).sort((a, b) => a.label.localeCompare(b.label));
-    return { items };
   }
 
   private upsertDiscovered(map: Map<string, DiscoveredWorkspace>, item: DiscoveredWorkspace): void {

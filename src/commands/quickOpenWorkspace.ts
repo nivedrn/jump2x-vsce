@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { DiscoveryService } from '../services/discoveryService';
 import { StorageManager } from '../storage/storageManager';
-import { DiscoveredWorkspace, FavoriteWorkspace } from '../types';
+import { DiscoveredWorkspace, FavoriteWorkspace, HiddenWorkspace } from '../types';
 import { workspacePathKey } from '../utils/pathUtils';
 
 const REMOVE_FAVORITE_BUTTON: vscode.QuickInputButton = {
@@ -12,6 +12,11 @@ const REMOVE_FAVORITE_BUTTON: vscode.QuickInputButton = {
 const ADD_FAVORITE_BUTTON: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('star-add'),
   tooltip: 'Add to favorites',
+};
+
+const HIDE_WORKSPACE_BUTTON: vscode.QuickInputButton = {
+  iconPath: new vscode.ThemeIcon('eye-closed'),
+  tooltip: 'Hide workspace',
 };
 
 interface WorkspaceQuickPickItem extends vscode.QuickPickItem {
@@ -25,6 +30,7 @@ interface WorkspaceQuickPickItem extends vscode.QuickPickItem {
 function buildQuickPickItems(
   favorites: FavoriteWorkspace[],
   discovered: DiscoveredWorkspace[],
+  hidden: HiddenWorkspace[],
   warning?: string,
   includeDiscoveryPlaceholder = false
 ): WorkspaceQuickPickItem[] {
@@ -39,7 +45,7 @@ function buildQuickPickItems(
   if (favorites.length === 0) {
     items.push({
       label: 'No favorites yet',
-      description: 'Use Add Current Workspace to save one.',
+      description: 'Use "Add Current Workspace to Favorites" to save one.',
       section: 'placeholder',
     });
   } else {
@@ -63,13 +69,16 @@ function buildQuickPickItems(
   });
 
   const favoriteKeys = new Set(favorites.map((item) => workspacePathKey(item.path)));
-  const discoveredOnly = discovered.filter((item) => !favoriteKeys.has(workspacePathKey(item.path)));
+  const hiddenKeys = new Set(hidden.map((item) => workspacePathKey(item.path)));
+  const discoveredOnly = discovered.filter(
+    (item) => !favoriteKeys.has(workspacePathKey(item.path)) && !hiddenKeys.has(workspacePathKey(item.path))
+  );
 
   if (discoveredOnly.length === 0) {
     items.push({
       label: includeDiscoveryPlaceholder
         ? 'Discovering workspaces...'
-        : warning ?? 'No discovered workspaces. Configure snap2x.workspacesDirectory.',
+        : warning ?? 'No discovered workspaces. Configure snap2x.workspacesDirectories.',
       section: 'placeholder',
     });
   } else {
@@ -81,7 +90,7 @@ function buildQuickPickItems(
         uri: vscode.Uri.parse(item.uri),
         isFavorite: false,
         section: 'discovered',
-        buttons: [ADD_FAVORITE_BUTTON],
+        buttons: [ADD_FAVORITE_BUTTON, HIDE_WORKSPACE_BUTTON],
       });
     }
   }
@@ -93,16 +102,21 @@ function isOpenableItem(item: WorkspaceQuickPickItem | undefined): item is Works
   return Boolean(item?.path && item.uri);
 }
 
+function cleanWorkspaceLabel(label: string): string {
+  return label.replace(/^\$\([^)]+\)\s/, '');
+}
+
 export async function quickOpenWorkspace(
   storageManager: StorageManager,
   discoveryService: DiscoveryService
 ): Promise<void> {
   let favorites = storageManager.getFavorites();
+  let hidden = storageManager.getHidden();
   let discoveredItems: DiscoveredWorkspace[] = [];
   let discoveryWarning: string | undefined;
 
   const quickPick = vscode.window.createQuickPick<WorkspaceQuickPickItem>();
-  quickPick.items = buildQuickPickItems(favorites, discoveredItems, discoveryWarning, true);
+  quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning, true);
   quickPick.placeholder = 'Select a workspace to open';
   quickPick.matchOnDescription = true;
   quickPick.busy = true;
@@ -112,11 +126,12 @@ export async function quickOpenWorkspace(
   discoveryService.discoverWorkspaces().then((discovered) => {
     discoveredItems = discovered.items;
     discoveryWarning = discovered.warning;
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, discoveryWarning);
+    hidden = storageManager.getHidden();
+    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning);
     quickPick.busy = false;
   }).catch((error: unknown) => {
     discoveryWarning = error instanceof Error ? error.message : 'Failed to discover workspaces.';
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, discoveryWarning);
+    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning);
     quickPick.busy = false;
   });
 
@@ -126,34 +141,62 @@ export async function quickOpenWorkspace(
       return;
     }
 
-    if (item.isFavorite) {
+    if (e.button === HIDE_WORKSPACE_BUTTON) {
+      await storageManager.hideWorkspace({
+        path: item.path,
+        uri: item.uri.toString(),
+        label: cleanWorkspaceLabel(item.label),
+      });
+    } else if (item.isFavorite) {
       // Remove from favorites
       await storageManager.removeFavorite(item.path);
     } else {
       // Add to favorites
-      await storageManager.addFavorite(item.uri, item.label.replace(/^\$\([^)]+\)\s/, ''));
+      await storageManager.addFavorite(item.uri, cleanWorkspaceLabel(item.label));
     }
 
     favorites = storageManager.getFavorites();
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, discoveryWarning);
+    hidden = storageManager.getHidden();
+    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning);
   };
 
+  let lastInteractiveItem: WorkspaceQuickPickItem | undefined;
+
   const selected = await new Promise<WorkspaceQuickPickItem | undefined>((resolve) => {
+    let accepted = false;
+
     quickPick.onDidTriggerItemButton((e) => {
       handleButtonClick(e);
     });
 
+    quickPick.onDidChangeSelection((items) => {
+      const selectedItem = items[0];
+      if (isOpenableItem(selectedItem)) {
+        lastInteractiveItem = selectedItem;
+      }
+    });
+
+    quickPick.onDidChangeActive((items) => {
+      const activeItem = items[0];
+      if (isOpenableItem(activeItem)) {
+        lastInteractiveItem = activeItem;
+      }
+    });
+
     quickPick.onDidAccept(() => {
-      const item = quickPick.selectedItems[0];
+      const item = quickPick.selectedItems[0] ?? quickPick.activeItems[0] ?? lastInteractiveItem;
       if (!isOpenableItem(item)) {
         return;
       }
-      quickPick.dispose();
+      accepted = true;
       resolve(item);
+      quickPick.dispose();
     });
 
     quickPick.onDidHide(() => {
-      quickPick.dispose();
+      if (accepted) {
+        return;
+      }
       resolve(undefined);
     });
   });
@@ -171,5 +214,5 @@ export async function quickOpenWorkspace(
   }
 
   // Always open in new window
-  await vscode.commands.executeCommand('vscode.openFolder', selected.uri, true);
+  await vscode.commands.executeCommand('vscode.openFolder', selected.uri, { forceNewWindow: true });
 }

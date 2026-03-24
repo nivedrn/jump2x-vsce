@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { DiscoveryService } from '../services/discoveryService';
 import { StorageManager } from '../storage/storageManager';
-import { DiscoveredWorkspace, FavoriteWorkspace, WorkspaceItemKind } from '../types';
+import { DiscoveredWorkspace, FavoriteWorkspace, HiddenWorkspace, WorkspaceItemKind } from '../types';
 import { workspacePathKey } from '../utils/pathUtils';
 
 const FAVORITES_SECTION_ID = 'snap2x:favorites';
 const DISCOVERED_SECTION_ID = 'snap2x:discovered';
+const HIDDEN_SECTION_ID = 'snap2x:hidden';
 
 export interface WorkspaceNodeData {
   kind: WorkspaceItemKind;
@@ -36,10 +37,16 @@ export class WorkspaceTreeItem extends vscode.TreeItem {
         node.kind === 'favoriteWorkspace'
           ? new vscode.ThemeIcon('star-full')
           : new vscode.ThemeIcon('folder-opened');
+    } else if (node.kind === 'hiddenWorkspace') {
+      this.tooltip = node.path;
+      this.description = node.path;
+      this.iconPath = new vscode.ThemeIcon('eye-closed');
     } else if (node.kind === 'favoritesRoot') {
       this.iconPath = new vscode.ThemeIcon('star-empty');
     } else if (node.kind === 'discoveredRoot') {
       this.iconPath = new vscode.ThemeIcon('folder-library');
+    } else if (node.kind === 'hiddenRoot') {
+      this.iconPath = new vscode.ThemeIcon('eye-closed');
     }
   }
 }
@@ -90,6 +97,14 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
           },
           vscode.TreeItemCollapsibleState.Expanded
         ),
+        new WorkspaceTreeItem(
+          {
+            id: HIDDEN_SECTION_ID,
+            kind: 'hiddenRoot',
+            label: 'Hidden Workspaces',
+          },
+          vscode.TreeItemCollapsibleState.Collapsed
+        ),
       ];
     }
 
@@ -99,6 +114,10 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
 
     if (element.node.id === DISCOVERED_SECTION_ID) {
       return this.buildDiscoveredItems();
+    }
+
+    if (element.node.id === HIDDEN_SECTION_ID) {
+      return this.buildHiddenItems();
     }
 
     return [];
@@ -111,7 +130,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
 
     if (favorites.length === 0) {
       return [
-        this.makePlaceholder('No favorites yet. Use "Add Current Workspace".', 'snap2x:favorites:empty'),
+        this.makePlaceholder('No favorites yet. Use "Add Current Workspace to Favorites".', 'snap2x:favorites:empty'),
       ];
     }
 
@@ -120,14 +139,27 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
 
   private buildDiscoveredItems(): WorkspaceTreeItem[] {
     const favoriteKeys = new Set(this.storageManager.getFavorites().map((item) => workspacePathKey(item.path)));
-    const discoveredOnly = this.discoveredCache.filter((item) => !favoriteKeys.has(workspacePathKey(item.path)));
+    const hiddenKeys = new Set(this.storageManager.getHidden().map((item) => workspacePathKey(item.path)));
+    const discoveredOnly = this.discoveredCache.filter(
+      (item) => !favoriteKeys.has(workspacePathKey(item.path)) && !hiddenKeys.has(workspacePathKey(item.path))
+    );
 
     if (discoveredOnly.length === 0) {
-      const label = this.warningMessage ?? 'No discovered workspaces. Configure snap2x.workspacesDirectory.';
+      const label = this.warningMessage ?? 'No discovered workspaces. Configure snap2x.workspacesDirectories.';
       return [this.makePlaceholder(label, 'snap2x:discovered:empty')];
     }
 
     return discoveredOnly.map((item) => this.discoveredToTreeItem(item));
+  }
+
+  private buildHiddenItems(): WorkspaceTreeItem[] {
+    const hidden = this.storageManager.getHidden().sort((a, b) => a.label.localeCompare(b.label));
+
+    if (hidden.length === 0) {
+      return [this.makePlaceholder('No hidden workspaces.', 'snap2x:hidden:empty')];
+    }
+
+    return hidden.map((item) => this.hiddenToTreeItem(item));
   }
 
   private favoriteToTreeItem(favorite: FavoriteWorkspace): WorkspaceTreeItem {
@@ -138,6 +170,19 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
         label: favorite.label,
         uri: vscode.Uri.parse(favorite.uri),
         path: favorite.path,
+      },
+      vscode.TreeItemCollapsibleState.None
+    );
+  }
+
+  private hiddenToTreeItem(item: HiddenWorkspace): WorkspaceTreeItem {
+    return new WorkspaceTreeItem(
+      {
+        id: `snap2x:hidden:${item.path}`,
+        kind: 'hiddenWorkspace',
+        label: item.label,
+        uri: vscode.Uri.parse(item.uri),
+        path: item.path,
       },
       vscode.TreeItemCollapsibleState.None
     );

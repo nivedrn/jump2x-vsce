@@ -20,7 +20,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     treeView,
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (
-        event.affectsConfiguration('snap2x.workspacesDirectory') ||
+        event.affectsConfiguration('snap2x.workspacesDirectories') ||
+        event.affectsConfiguration('snap2x.excludedDirectories') ||
         event.affectsConfiguration('snap2x.recursiveScan') ||
         event.affectsConfiguration('snap2x.includeCodeWorkspaceFiles')
       ) {

@@ -3,7 +3,7 @@
   "displayName": "Snap2x",
   "description": "Quickly open and manage favorite and discovered workspaces.",
   "version": "1.0.0",
-  "publisher": "nived",
+  "publisher": "devn",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -17,6 +17,8 @@
     "onCommand:snap2x.refreshWorkspaces",
     "onCommand:snap2x.openWorkspace",
     "onCommand:snap2x.removeFavorite",
+    "onCommand:snap2x.hideWorkspace",
+    "onCommand:snap2x.restoreWorkspace",
     "onCommand:snap2x.openSettings"
   ],
   "main": "./out/extension.js",
@@ -32,7 +34,7 @@
     "commands": [
       {
         "command": "snap2x.addCurrentWorkspace",
-        "title": "Snap2x: Add Current Workspace",
+        "title": "Snap2x: Add Current Workspace to Favorites",
         "category": "Snap2x",
         "icon": "$(star-add)"
       },
@@ -52,6 +54,18 @@
         "title": "Snap2x: Remove Favorite",
         "category": "Snap2x",
         "icon": "$(trash)"
+      },
+      {
+        "command": "snap2x.hideWorkspace",
+        "title": "Snap2x: Hide Workspace",
+        "category": "Snap2x",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "snap2x.restoreWorkspace",
+        "title": "Snap2x: Restore Workspace",
+        "category": "Snap2x",
+        "icon": "$(eye)"
       },
       {
         "command": "snap2x.openSettings",
@@ -100,21 +114,56 @@
           "command": "snap2x.addCurrentWorkspace",
           "when": "view == snap2x.workspaceExplorer && viewItem == discoveredWorkspace",
           "group": "inline"
+        },
+        {
+          "command": "snap2x.hideWorkspace",
+          "when": "view == snap2x.workspaceExplorer && viewItem == discoveredWorkspace",
+          "group": "inline"
+        },
+        {
+          "command": "snap2x.restoreWorkspace",
+          "when": "view == snap2x.workspaceExplorer && viewItem == hiddenWorkspace",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "snap2x.openWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "snap2x.removeFavorite",
+          "when": "false"
+        },
+        {
+          "command": "snap2x.hideWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "snap2x.restoreWorkspace",
+          "when": "false"
         }
       ]
     },
     "configuration": {
       "title": "Snap2x",
       "properties": {
-        "snap2x.workspacesDirectory": {
-          "type": "string",
-          "default": "",
-          "description": "Directory to scan for git repositories and .code-workspace files."
+        "snap2x.workspacesDirectories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Directories to scan for git repositories and .code-workspace files. Supports multiple paths."
+        },
+        "snap2x.excludedDirectories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Directories to skip during scanning. Full paths that the scanner should not traverse."
         },
         "snap2x.recursiveScan": {
           "type": "boolean",
           "default": true,
-          "description": "Recursively scan nested folders in workspacesDirectory."
+          "description": "Recursively scan nested folders in workspacesDirectories."
         },
         "snap2x.includeCodeWorkspaceFiles": {
           "type": "boolean",

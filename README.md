@@ -1,26 +1,59 @@
 # Snap2x
 
-Snap2x helps you quickly jump between workspaces.
+Snap2x helps you quickly jump between workspaces with favorites, discovery, and hide controls.
 
 ## Features
 
-- Persisted list of favorited workspaces.
-- Add current workspace to favorites.
-- Open any favorite or discovered workspace in a new VS Code window.
-- Discover workspace folders and `.code-workspace` files from a configured directory.
-- Track active Snap2x windows in shared global storage using per-window heartbeats.
+- Favorited workspaces persisted in extension storage.
+- Add current workspace to favorites from the Snap2x view title action.
+- Discover Git repositories and `.code-workspace` files from one or more configured root folders.
+- Exclude specific directories from discovery traversal.
+- Hide discovered workspaces you do not want to see in quick open or discovered list.
+- Restore hidden workspaces from a dedicated Hidden Workspaces section.
+- Quick Open picker with section separators:
+	- Favorited Workspaces
+	- Discovered Workspaces
+- Inline quick actions in quick open for discovered items:
+	- Add to favorites
+	- Hide workspace
+- Open selected workspace in a new VS Code window.
 
-## Configure discovery directory
+## Settings
 
-1. Open Settings.
-2. Search for `Snap2x`.
-3. Set `snap2x.workspacesDirectory` to a folder path.
+Configure these settings from VS Code Settings by searching for `Snap2x`:
+
+- `snap2x.workspacesDirectories` (array of strings)
+	- Root directories to scan for Git repos and `.code-workspace` files.
+- `snap2x.excludedDirectories` (array of strings)
+	- Full directory paths to skip while scanning.
+- `snap2x.recursiveScan` (boolean)
+	- If true, scan nested directories recursively.
+- `snap2x.includeCodeWorkspaceFiles` (boolean)
+	- If true, include discovered `.code-workspace` files.
+
+## Commands and interactions
+
+- `Snap2x: Quick Open Workspace`
+	- Default keybinding: `Ctrl+Shift+K` (`Cmd+Shift+K` on macOS).
+- `Snap2x: Add Current Workspace to Favorites`
+- `Snap2x: Refresh Workspaces`
+- `Snap2x: Open Settings`
+
+Notes:
+
+- Some commands are internal and intentionally hidden from the Command Palette (for example, open selected workspace, remove favorite, hide, and restore). These are triggered through tree item interactions and quick open buttons.
 
 ## Important limitation
 
-VS Code extensions cannot programmatically focus an already-open, specific other window. Snap2x always opens the selected workspace in a new window.
+VS Code extensions cannot programmatically focus a specific already-open window. Snap2x always opens the selected workspace in a new window.
 
-Snap2x uses shared storage metadata to detect likely active windows and warns before opening a duplicate, but it still cannot switch focus to another existing window.
+## Usage flow
+
+1. Add one or more `workspacesDirectories`.
+2. Optionally add `excludedDirectories`.
+3. Open the Snap2x view and refresh discovery.
+4. Add frequently used entries to favorites.
+5. Hide noisy discovered entries; restore later from Hidden Workspaces.
 
 ## Development
 

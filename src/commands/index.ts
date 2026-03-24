@@ -3,6 +3,8 @@ import { addCurrentWorkspace } from './addCurrentWorkspace';
 import { openWorkspace } from './openWorkspace';
 import { quickOpenWorkspace } from './quickOpenWorkspace';
 import { removeFavorite } from './removeFavorite';
+import { hideWorkspace } from './hideWorkspace';
+import { restoreWorkspace } from './restoreWorkspace';
 import { refresh } from './refresh';
 import { WorkspaceTreeItem, WorkspaceTreeProvider } from '../providers/workspaceTreeProvider';
 import { DiscoveryService } from '../services/discoveryService';
@@ -33,8 +35,20 @@ export function registerCommands(
     vscode.commands.registerCommand('snap2x.refreshWorkspaces', async () => {
       await refresh(provider);
     }),
+    vscode.commands.registerCommand('snap2x.hideWorkspace', async (target?: WorkspaceTreeItem) => {
+      if (!target) {
+        return;
+      }
+      await hideWorkspace(storageManager, provider, target);
+    }),
+    vscode.commands.registerCommand('snap2x.restoreWorkspace', async (target?: WorkspaceTreeItem) => {
+      if (!target) {
+        return;
+      }
+      await restoreWorkspace(storageManager, provider, target);
+    }),
     vscode.commands.registerCommand('snap2x.openSettings', async () => {
-      await vscode.commands.executeCommand('workbench.action.openSettings', 'snap2x.workspacesDirectory');
+      await vscode.commands.executeCommand('workbench.action.openSettings', 'snap2x');
     }),
     vscode.commands.registerCommand('snap2x.quickOpenWorkspace', async () => {
       await quickOpenWorkspace(storageManager, discoveryService);

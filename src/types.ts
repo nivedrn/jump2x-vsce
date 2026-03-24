@@ -14,22 +14,26 @@ export interface DiscoveredWorkspace {
   isCodeWorkspaceFile: boolean;
 }
 
+export interface HiddenWorkspace {
+  path: string;
+  uri: string;
+  label: string;
+}
+
 export interface Snap2xSettings {
-  workspacesDirectory: string;
+  workspacesDirectories: string[];
+  excludedDirectories: string[];
   recursiveScan: boolean;
   includeCodeWorkspaceFiles: boolean;
 }
 
 export const FAVORITES_STORAGE_KEY = 'snap2x.favorites';
+export const HIDDEN_STORAGE_KEY = 'snap2x.hidden';
 
 export type WorkspaceItemKind =
   | 'favoritesRoot'
   | 'discoveredRoot'
+  | 'hiddenRoot'
   | 'favoriteWorkspace'
-  | 'discoveredWorkspace';
-
-export interface OpenableWorkspace {
-  uri: vscode.Uri;
-  label: string;
-  path: string;
-}
+  | 'discoveredWorkspace'
+  | 'hiddenWorkspace';
