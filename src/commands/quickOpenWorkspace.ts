@@ -35,6 +35,7 @@ function buildQuickPickItems(
   includeDiscoveryPlaceholder = false
 ): WorkspaceQuickPickItem[] {
   const items: WorkspaceQuickPickItem[] = [];
+  let n = 1;
 
   items.push({
     kind: vscode.QuickPickItemKind.Separator,
@@ -51,7 +52,7 @@ function buildQuickPickItems(
   } else {
     for (const favorite of favorites) {
       items.push({
-        label: `$(star-full) ${favorite.label}`,
+        label: `${n++} $(star-full) ${favorite.label}`,
         description: favorite.path,
         path: favorite.path,
         uri: vscode.Uri.parse(favorite.uri),
@@ -84,7 +85,7 @@ function buildQuickPickItems(
   } else {
     for (const item of discoveredOnly) {
       items.push({
-        label: `$(folder-opened) ${item.label}`,
+        label: `${n++} $(folder-opened) ${item.label}`,
         description: item.path,
         path: item.path,
         uri: vscode.Uri.parse(item.uri),
@@ -103,7 +104,7 @@ function isOpenableItem(item: WorkspaceQuickPickItem | undefined): item is Works
 }
 
 function cleanWorkspaceLabel(label: string): string {
-  return label.replace(/^\$\([^)]+\)\s/, '');
+  return label.replace(/^\d+\s+/, '').replace(/^\$\([^)]+\)\s/, '');
 }
 
 export async function quickOpenWorkspace(
