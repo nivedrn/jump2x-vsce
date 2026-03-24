@@ -23,6 +23,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         event.affectsConfiguration('leap.workspacesDirectories') ||
         event.affectsConfiguration('leap.excludedDirectories') ||
         event.affectsConfiguration('leap.recursiveScan') ||
+        event.affectsConfiguration('leap.maxScanDepth') ||
         event.affectsConfiguration('leap.includeCodeWorkspaceFiles')
       ) {
         await provider.refresh();

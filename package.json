@@ -7,6 +7,7 @@
   "engines": {
     "vscode": "^1.90.0"
   },
+  "icon": "images/icon.png",
   "categories": [
     "Other"
   ],
@@ -164,6 +165,11 @@
           "type": "boolean",
           "default": true,
           "description": "Recursively scan nested folders in workspacesDirectories."
+        },
+        "leap.maxScanDepth": {
+          "type": "number",
+          "default": -1,
+          "description": "Maximum folder depth to scan from each root directory. Depth is measured in folder levels from the configured root (0 = root only, 1 = include direct children). Use -1 for unlimited depth."
         },
         "leap.includeCodeWorkspaceFiles": {
           "type": "boolean",

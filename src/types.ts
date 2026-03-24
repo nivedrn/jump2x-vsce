@@ -24,6 +24,7 @@ export interface LeapSettings {
   workspacesDirectories: string[];
   excludedDirectories: string[];
   recursiveScan: boolean;
+  maxScanDepth: number;
   includeCodeWorkspaceFiles: boolean;
 }
 

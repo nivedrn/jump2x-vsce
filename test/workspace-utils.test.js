@@ -35,7 +35,11 @@ test('isIgnoredDirectory matches internal skip list', () => {
 });
 
 test('shouldTraverseDirectory only descends from root when recursive scan is disabled', () => {
-  assert.equal(shouldTraverseDirectory(0, false), true);
-  assert.equal(shouldTraverseDirectory(1, false), false);
-  assert.equal(shouldTraverseDirectory(5, true), true);
+  assert.equal(shouldTraverseDirectory(0, false, -1), true);
+  assert.equal(shouldTraverseDirectory(1, false, -1), false);
+  assert.equal(shouldTraverseDirectory(5, true, -1), true);
+  assert.equal(shouldTraverseDirectory(0, true, 0), false);
+  assert.equal(shouldTraverseDirectory(0, true, 1), true);
+  assert.equal(shouldTraverseDirectory(1, true, 1), false);
+  assert.equal(shouldTraverseDirectory(1, true, 2), true);
 });

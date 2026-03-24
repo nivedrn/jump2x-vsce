@@ -28,6 +28,11 @@ Configure these settings from VS Code Settings by searching for `Leap`:
 	- Full directory paths to skip while scanning.
 - `leap.recursiveScan` (boolean)
 	- If true, scan nested directories recursively.
+- `leap.maxScanDepth` (number)
+	- Maximum folder depth from each configured root.
+	- `0` scans only the root folder.
+	- `1` includes direct child folders.
+	- `-1` means unlimited depth.
 - `leap.includeCodeWorkspaceFiles` (boolean)
 	- If true, include discovered `.code-workspace` files.
 

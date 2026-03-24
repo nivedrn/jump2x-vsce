@@ -25,6 +25,7 @@ export class DiscoveryService {
         .map((d) => d.trim())
         .filter(Boolean),
       recursiveScan: config.get<boolean>('recursiveScan', true),
+      maxScanDepth: this.normalizeMaxScanDepth(config.get<number>('maxScanDepth', -1)),
       includeCodeWorkspaceFiles: config.get<boolean>('includeCodeWorkspaceFiles', true),
     };
   }
@@ -75,7 +76,8 @@ export class DiscoveryService {
       }
 
       // Check if current directory is a git repository
-      if (current.depth > 0 && isGitRepository(entries)) {
+      const isCurrentGitRepo = current.depth > 0 && isGitRepository(entries);
+      if (isCurrentGitRepo) {
         const folderName = current.uri.fsPath.split(path.sep).pop() || '';
         this.upsertDiscovered(dedup, {
           path: path.normalize(current.uri.fsPath),
@@ -91,7 +93,8 @@ export class DiscoveryService {
 
         if (fileType === vscode.FileType.Directory) {
           if (
-            shouldTraverseDirectory(current.depth, settings.recursiveScan) &&
+            !isCurrentGitRepo &&
+            shouldTraverseDirectory(current.depth, settings.recursiveScan, settings.maxScanDepth) &&
             !isIgnoredDirectory(name) &&
             !excludedKeys.has(workspacePathKey(childPath))
           ) {
@@ -129,5 +132,13 @@ export class DiscoveryService {
     } catch {
       return false;
     }
+  }
+
+  private normalizeMaxScanDepth(value: number): number {
+    if (!Number.isFinite(value)) {
+      return -1;
+    }
+
+    return Math.floor(value);
   }
 }
