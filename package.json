@@ -1,0 +1,140 @@
+{
+  "name": "snap2x",
+  "displayName": "Snap2x",
+  "description": "Quickly open and manage favorite and discovered workspaces.",
+  "version": "1.0.0",
+  "publisher": "nived",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:snap2x.workspaceExplorer",
+    "onCommand:snap2x.quickOpenWorkspace",
+    "onCommand:snap2x.addCurrentWorkspace",
+    "onCommand:snap2x.refreshWorkspaces",
+    "onCommand:snap2x.openWorkspace",
+    "onCommand:snap2x.removeFavorite",
+    "onCommand:snap2x.openSettings"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "snap2x.workspaceExplorer",
+          "name": "Snap2x"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "snap2x.addCurrentWorkspace",
+        "title": "Snap2x: Add Current Workspace",
+        "category": "Snap2x",
+        "icon": "$(star-add)"
+      },
+      {
+        "command": "snap2x.refreshWorkspaces",
+        "title": "Snap2x: Refresh Workspaces",
+        "category": "Snap2x",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "snap2x.openWorkspace",
+        "title": "Snap2x: Open Workspace",
+        "category": "Snap2x"
+      },
+      {
+        "command": "snap2x.removeFavorite",
+        "title": "Snap2x: Remove Favorite",
+        "category": "Snap2x",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "snap2x.openSettings",
+        "title": "Snap2x: Open Settings",
+        "category": "Snap2x",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "snap2x.quickOpenWorkspace",
+        "title": "Snap2x: Quick Open Workspace",
+        "category": "Snap2x"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "snap2x.quickOpenWorkspace",
+        "key": "ctrl+shift+k",
+        "mac": "cmd+shift+k"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "snap2x.addCurrentWorkspace",
+          "when": "view == snap2x.workspaceExplorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "snap2x.refreshWorkspaces",
+          "when": "view == snap2x.workspaceExplorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "snap2x.openSettings",
+          "when": "view == snap2x.workspaceExplorer",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "snap2x.removeFavorite",
+          "when": "view == snap2x.workspaceExplorer && viewItem == favoriteWorkspace",
+          "group": "inline"
+        },
+        {
+          "command": "snap2x.addCurrentWorkspace",
+          "when": "view == snap2x.workspaceExplorer && viewItem == discoveredWorkspace",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Snap2x",
+      "properties": {
+        "snap2x.workspacesDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "Directory to scan for git repositories and .code-workspace files."
+        },
+        "snap2x.recursiveScan": {
+          "type": "boolean",
+          "default": true,
+          "description": "Recursively scan nested folders in workspacesDirectory."
+        },
+        "snap2x.includeCodeWorkspaceFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include discovered .code-workspace files."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test test/workspace-utils.test.js",
+    "vscode:prepublish": "npm run compile",
+    "package:vsix": "vsce package --allow-missing-repository --skip-license"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.2",
+    "@types/node": "^20.14.2",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.5.4"
+  }
+}

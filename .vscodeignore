@@ -1,0 +1,7 @@
+.vscode/**
+out/test/**
+src/**
+.gitignore
+test/**
+plan-snap2x.prompt.md
+tsconfig.json
