@@ -2,7 +2,7 @@
   "name": "jump2x",
   "displayName": "Jump2x",
   "description": "Quickly open and manage favorite and discovered workspaces.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "devn",
   "engines": {
     "vscode": "^1.90.0"
@@ -151,13 +151,17 @@
       "properties": {
         "jump2x.workspacesDirectories": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Directories to scan for git repositories and .code-workspace files. Supports multiple paths."
         },
         "jump2x.excludedDirectories": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Directories to skip during scanning. Full paths that the scanner should not traverse."
         },
@@ -175,8 +179,7 @@
           "type": "boolean",
           "default": true,
           "description": "Include discovered .code-workspace files."
-        }
-        ,
+        },
         "jump2x.quickPickItemLimit": {
           "type": "number",
           "default": 20,
