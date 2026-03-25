@@ -2,7 +2,7 @@
   "name": "jump2x",
   "displayName": "Jump2x",
   "description": "Quickly open and manage favorite and discovered workspaces.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "devn",
   "engines": {
     "vscode": "^1.90.0"
@@ -175,6 +175,12 @@
           "type": "boolean",
           "default": true,
           "description": "Include discovered .code-workspace files."
+        }
+        ,
+        "jump2x.quickPickItemLimit": {
+          "type": "number",
+          "default": 20,
+          "description": "Maximum number of items to show in the quick open dropdown (favorites + discovered). Set to -1 for unlimited."
         }
       }
     }

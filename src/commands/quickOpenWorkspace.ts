@@ -40,10 +40,12 @@ function buildQuickPickItems(
   discovered: DiscoveredWorkspace[],
   hidden: HiddenWorkspace[],
   warning?: string,
-  includeDiscoveryPlaceholder = false
+  includeDiscoveryPlaceholder = false,
+  itemLimit: number = 20
 ): WorkspaceQuickPickItem[] {
   const items: WorkspaceQuickPickItem[] = [];
-  let n = 1;
+  let favCount = 1;
+  let totalCount = 0;
 
   items.push({
     kind: vscode.QuickPickItemKind.Separator,
@@ -59,9 +61,10 @@ function buildQuickPickItems(
     });
   } else {
     for (const favorite of favorites) {
+      if (itemLimit !== -1 && totalCount >= itemLimit) break;
       const isCodeWorkspaceFile = isCodeWorkspacePath(favorite.path);
       items.push({
-        label: `${n++} ${workspaceLabelIcon(isCodeWorkspaceFile)} ${favorite.label}`,
+        label: `${favCount} ${workspaceLabelIcon(isCodeWorkspaceFile)} ${favorite.label}`,
         description: favorite.path,
         path: favorite.path,
         uri: vscode.Uri.parse(favorite.uri),
@@ -69,6 +72,8 @@ function buildQuickPickItems(
         section: 'favorite',
         buttons: [REMOVE_FAVORITE_BUTTON],
       });
+      favCount++;
+      totalCount++;
     }
   }
 
@@ -93,8 +98,9 @@ function buildQuickPickItems(
     });
   } else {
     for (const item of discoveredOnly) {
+      if (itemLimit !== -1 && totalCount >= itemLimit) break;
       items.push({
-        label: `${n++} ${workspaceLabelIcon(item.isCodeWorkspaceFile)} ${item.label}`,
+        label: `${workspaceLabelIcon(item.isCodeWorkspaceFile)} ${item.label}`,
         description: item.path,
         path: item.path,
         uri: vscode.Uri.parse(item.uri),
@@ -102,6 +108,7 @@ function buildQuickPickItems(
         section: 'discovered',
         buttons: [ADD_FAVORITE_BUTTON, HIDE_WORKSPACE_BUTTON],
       });
+      totalCount++;
     }
   }
 
@@ -126,7 +133,8 @@ export async function quickOpenWorkspace(
   let discoveryWarning: string | undefined;
 
   const quickPick = vscode.window.createQuickPick<WorkspaceQuickPickItem>();
-  quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning, true);
+  const itemLimit = vscode.workspace.getConfiguration('jump2x').get<number>('quickPickItemLimit', 20);
+  quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning, true, itemLimit);
   quickPick.placeholder = 'Select a workspace to open';
   quickPick.matchOnDescription = true;
   quickPick.busy = true;
@@ -137,11 +145,11 @@ export async function quickOpenWorkspace(
     discoveredItems = discovered.items;
     discoveryWarning = discovered.warning;
     hidden = storageManager.getHidden();
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning);
+    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning, false, itemLimit);
     quickPick.busy = false;
   }).catch((error: unknown) => {
     discoveryWarning = error instanceof Error ? error.message : 'Failed to discover workspaces.';
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning);
+    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning, false, itemLimit);
     quickPick.busy = false;
   });
 
@@ -167,7 +175,7 @@ export async function quickOpenWorkspace(
 
     favorites = storageManager.getFavorites();
     hidden = storageManager.getHidden();
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning);
+    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, discoveryWarning, false, itemLimit);
   };
 
   let lastInteractiveItem: WorkspaceQuickPickItem | undefined;
