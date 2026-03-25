@@ -2,7 +2,7 @@
   "name": "jump2x",
   "displayName": "Jump2x",
   "description": "Quickly open and manage favorite and discovered workspaces.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "devn",
   "engines": {
     "vscode": "^1.90.0"
