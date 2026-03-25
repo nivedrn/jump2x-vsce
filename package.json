@@ -2,7 +2,7 @@
   "name": "jump2x",
   "displayName": "Jump2x",
   "description": "Quickly open and manage favorite and discovered workspaces.",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "publisher": "devn",
   "engines": {
     "vscode": "^1.90.0"
@@ -190,6 +190,9 @@
     "watch": "tsc -watch -p ./",
     "test": "npm run compile && node --test test/workspace-utils.test.js",
     "vscode:prepublish": "npm run compile",
+    "release:patch": "npm version patch -m 'chore: release v%s' && git push && git push --tags",
+    "release:minor": "npm version minor -m 'chore: release v%s' && git push && git push --tags",
+    "release:major": "npm version major -m 'chore: release v%s' && git push && git push --tags",
     "package:vsix": "vsce package --allow-missing-repository --skip-license"
   },
   "devDependencies": {

@@ -28,62 +28,55 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve release metadata
+      - name: Resolve metadata
         id: meta
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          EXT_ID=$(node -p "const p=require('./package.json'); `${p.publisher}.${p.name}`")
-          TAG="v${VERSION}"
-          VSIX_FILE="jump2x-${VERSION}.vsix"
-
+          # Ensure this matches your Marketplace Publisher ID exactly
+          PUBLISHER=$(node -p "require('./package.json').publisher")
+          NAME=$(node -p "require('./package.json').name")
+          
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "extension_id=$EXT_ID" >> "$GITHUB_OUTPUT"
-          echo "vsix_file=$VSIX_FILE" >> "$GITHUB_OUTPUT"
+          echo "ext_id=$PUBLISHER.$NAME" >> "$GITHUB_OUTPUT"
+          echo "vsix_file=$NAME-$VERSION.vsix" >> "$GITHUB_OUTPUT"
 
-      - name: Detect existing GitHub release and Marketplace version
-        id: detect
+      - name: Check Marketplace Version
+        id: check
         run: |
-          TAG="${{ steps.meta.outputs.tag }}"
-          EXT_ID="${{ steps.meta.outputs.extension_id }}"
-          VERSION="${{ steps.meta.outputs.version }}"
-
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+          # Use || true so the step doesn't fail if the version isn't found
+          # We check if the specific version exists in the marketplace JSON
+          EXISTS=$(npx vsce show ${{ steps.meta.outputs.ext_id }} --json | jq ".versions[] | select(.version == \"${{ steps.meta.outputs.version }}\")" | jq -r '.version' || echo "")
+          
+          if [ "$EXISTS" = "${{ steps.meta.outputs.version }}" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "release_exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if npx vsce show "${EXT_ID}@${VERSION}" >/dev/null 2>&1; then
-            echo "marketplace_exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "marketplace_exists=false" >> "$GITHUB_OUTPUT"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Package VSIX
-        run: npm run package:vsix
+        if: steps.check.outputs.exists == 'false'
+        run: npx vsce package --allow-missing-repository --skip-license --out "${{ steps.meta.outputs.vsix_file }}"
 
-      - name: Create GitHub release
-        if: steps.detect.outputs.release_exists != 'true'
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          target_commitish: main
-          name: ${{ steps.meta.outputs.tag }}
+          tag_name: v${{ steps.meta.outputs.version }}
+          name: v${{ steps.meta.outputs.version }}
           generate_release_notes: true
           files: ${{ steps.meta.outputs.vsix_file }}
 
       - name: Publish to VS Code Marketplace
+        if: steps.check.outputs.exists == 'false'
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
-          if [ "${{ steps.detect.outputs.marketplace_exists }}" = "true" ]; then
-            echo "Version ${{ steps.meta.outputs.version }} is already published to Marketplace."
-            echo "Bump package.json version before pushing to main to publish an update."
-            exit 1
-          fi
           if [ -z "$VSCE_PAT" ]; then
-            echo "Missing VSCE_PAT secret. Add it in repository secrets before publishing."
+            echo "Error: VSCE_PAT is not set in GitHub Secrets."
             exit 1
           fi
-          npx vsce publish --packagePath "${{ steps.meta.outputs.vsix_file }}" -p "$VSCE_PAT"
+          npx vsce publish --packagePath "${{ steps.meta.outputs.vsix_file }}" -p "$VSCE_PAT" --no-verify
+
+      - name: Skip Logic
+        if: steps.check.outputs.exists == 'true'
+        run: echo "Version ${{ steps.meta.outputs.version }} is already on Marketplace. Nothing to do."
