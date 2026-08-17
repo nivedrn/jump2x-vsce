@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { DiscoveryService } from '../services/discoveryService';
 import { StorageManager } from '../storage/storageManager';
-import { DiscoveredWorkspace, FavoriteWorkspace, HiddenWorkspace, WorkspaceItemKind } from '../types';
+import { DiscoveredWorkspace, FavoriteWorkspace, HiddenWorkspace, WorktreeInfo, WorkspaceItemKind } from '../types';
 import { workspacePathKey } from '../utils/pathUtils';
 
 const FAVORITES_SECTION_ID = 'jump2x:favorites';
@@ -37,6 +37,15 @@ export class WorkspaceTreeItem extends vscode.TreeItem {
         node.kind === 'favoriteWorkspace'
           ? new vscode.ThemeIcon('star-full')
           : new vscode.ThemeIcon('folder-opened');
+    } else if (node.kind === 'worktreeWorkspace') {
+      this.tooltip = node.path;
+      this.description = node.path;
+      this.command = {
+        command: 'jump2x.openWorkspace',
+        title: 'Open Worktree',
+        arguments: [this],
+      };
+      this.iconPath = new vscode.ThemeIcon('git-branch');
     } else if (node.kind === 'hiddenWorkspace') {
       this.tooltip = node.path;
       this.description = node.path;
@@ -57,16 +66,43 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
 
   private discoveredCache: DiscoveredWorkspace[] = [];
   private warningMessage: string | undefined;
+  private worktreesByPath = new Map<string, WorktreeInfo[]>();
 
   constructor(
     private readonly storageManager: StorageManager,
     private readonly discoveryService: DiscoveryService
-  ) {}
+  ) { }
 
   public async refresh(): Promise<void> {
     const discovered = await this.discoveryService.discoverWorkspaces();
     this.discoveredCache = discovered.items;
     this.warningMessage = discovered.warning;
+
+    const worktrees = new Map<string, WorktreeInfo[]>();
+    for (const item of discovered.items) {
+      if (item.worktrees?.length) {
+        worktrees.set(workspacePathKey(item.path), item.worktrees);
+      }
+    }
+
+    const favorites = this.storageManager.getFavorites();
+    const includeWorktrees = this.discoveryService.getSettings().includeWorktrees;
+    if (includeWorktrees) {
+      await Promise.all(
+        favorites.map(async (favorite) => {
+          const key = workspacePathKey(favorite.path);
+          if (worktrees.has(key)) {
+            return;
+          }
+          const favoriteWorktrees = await this.discoveryService.getWorktrees(favorite.path);
+          if (favoriteWorktrees.length > 0) {
+            worktrees.set(key, favoriteWorktrees);
+          }
+        })
+      );
+    }
+
+    this.worktreesByPath = worktrees;
     this.onDidChangeTreeDataEmitter.fire(undefined);
   }
 
@@ -120,7 +156,19 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
       return this.buildHiddenItems();
     }
 
+    if (
+      (element.node.kind === 'favoriteWorkspace' || element.node.kind === 'discoveredWorkspace') &&
+      element.node.path
+    ) {
+      return this.buildWorktreeItems(element.node.path);
+    }
+
     return [];
+  }
+
+  private buildWorktreeItems(repoPath: string): WorkspaceTreeItem[] {
+    const worktrees = this.worktreesByPath.get(workspacePathKey(repoPath)) ?? [];
+    return worktrees.map((worktree) => this.worktreeToTreeItem(repoPath, worktree));
   }
 
   private buildFavoriteItems(): WorkspaceTreeItem[] {
@@ -171,7 +219,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
         uri: vscode.Uri.parse(favorite.uri),
         path: favorite.path,
       },
-      vscode.TreeItemCollapsibleState.None
+      this.collapsibleStateForRepo(favorite.path)
     );
   }
 
@@ -197,8 +245,27 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
         uri: vscode.Uri.parse(item.uri),
         path: item.path,
       },
+      this.collapsibleStateForRepo(item.path)
+    );
+  }
+
+  private worktreeToTreeItem(repoPath: string, worktree: WorktreeInfo): WorkspaceTreeItem {
+    return new WorkspaceTreeItem(
+      {
+        id: `jump2x:worktree:${repoPath}:${worktree.path}`,
+        kind: 'worktreeWorkspace',
+        label: worktree.label,
+        uri: vscode.Uri.parse(worktree.uri),
+        path: worktree.path,
+      },
       vscode.TreeItemCollapsibleState.None
     );
+  }
+
+  private collapsibleStateForRepo(repoPath: string): vscode.TreeItemCollapsibleState {
+    return this.worktreesByPath.has(workspacePathKey(repoPath))
+      ? vscode.TreeItemCollapsibleState.Collapsed
+      : vscode.TreeItemCollapsibleState.None;
   }
 
   private makePlaceholder(label: string, id: string): WorkspaceTreeItem {

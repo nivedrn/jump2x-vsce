@@ -7,11 +7,19 @@ export interface FavoriteWorkspace {
   addedAt: number;
 }
 
+export interface WorktreeInfo {
+  path: string;
+  uri: string;
+  label: string;
+  branch?: string;
+}
+
 export interface DiscoveredWorkspace {
   path: string;
   uri: string;
   label: string;
   isCodeWorkspaceFile: boolean;
+  worktrees?: WorktreeInfo[];
 }
 
 export interface HiddenWorkspace {
@@ -25,7 +33,8 @@ export interface Jump2xSettings {
   excludedDirectories: string[];
   recursiveScan: boolean;
   maxScanDepth: number;
-  includeCodeWorkspaceFiles: boolean;
+  workspaceMarkers: string[];
+  includeWorktrees: boolean;
 }
 
 export const FAVORITES_STORAGE_KEY = 'jump2x.favorites';
@@ -37,4 +46,5 @@ export type WorkspaceItemKind =
   | 'hiddenRoot'
   | 'favoriteWorkspace'
   | 'discoveredWorkspace'
-  | 'hiddenWorkspace';
+  | 'hiddenWorkspace'
+  | 'worktreeWorkspace';

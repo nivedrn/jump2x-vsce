@@ -175,10 +175,42 @@
           "default": -1,
           "description": "Maximum folder depth to scan from each root directory. Depth is measured in folder levels from the configured root (0 = root only, 1 = include direct children). Use -1 for unlimited depth."
         },
-        "jump2x.includeCodeWorkspaceFiles": {
+        "jump2x.workspaceMarkers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              ".git",
+              ".vs",
+              ".vscode",
+              ".code-workspace",
+              ".svn",
+              ".hg",
+              ".idea",
+              "package.json"
+            ],
+            "enumDescriptions": [
+              "Git repositories",
+              "Visual Studio folders",
+              "VS Code folders",
+              "VS Code workspace files (matched by suffix)",
+              "Subversion working copies",
+              "Mercurial repositories",
+              "JetBrains IDE folders",
+              "Node.js project folders"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [
+            ".git",
+            ".code-workspace"
+          ],
+          "markdownDescription": "Markers that identify a folder as a workspace. A folder is listed when it contains any of these entries. `.code-workspace` matches workspace files by suffix. Pick options from the list, or edit this setting in `settings.json` as a JSON array to add custom markers."
+        },
+        "jump2x.includeWorktrees": {
           "type": "boolean",
           "default": true,
-          "description": "Include discovered .code-workspace files."
+          "description": "List git worktrees underneath their repository."
         },
         "jump2x.quickPickItemLimit": {
           "type": "number",
@@ -202,6 +234,6 @@
     "@vscode/vsce": "^3.6.2",
     "@types/node": "^20.14.2",
     "@types/vscode": "^1.90.0",
-    "typescript": "^5.5.4"
+    "typescript": "^7.0.2"
   }
 }

@@ -24,7 +24,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         event.affectsConfiguration('jump2x.excludedDirectories') ||
         event.affectsConfiguration('jump2x.recursiveScan') ||
         event.affectsConfiguration('jump2x.maxScanDepth') ||
-        event.affectsConfiguration('jump2x.includeCodeWorkspaceFiles')
+        event.affectsConfiguration('jump2x.workspaceMarkers') ||
+        event.affectsConfiguration('jump2x.includeWorktrees')
       ) {
         await provider.refresh();
       }

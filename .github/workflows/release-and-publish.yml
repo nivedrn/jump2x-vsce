@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release-and-publish:
     runs-on: ubuntu-latest
@@ -43,11 +47,9 @@ jobs:
       - name: Check Marketplace Version
         id: check
         run: |
-          # Use || true so the step doesn't fail if the version isn't found
-          # We check if the specific version exists in the marketplace JSON
-          EXISTS=$(npx vsce show ${{ steps.meta.outputs.ext_id }} --json | jq ".versions[] | select(.version == \"${{ steps.meta.outputs.version }}\")" | jq -r '.version' || echo "")
-          
-          if [ "$EXISTS" = "${{ steps.meta.outputs.version }}" ]; then
+          # Treat any failure (e.g. extension not published yet) as "not found".
+          if npx vsce show "${{ steps.meta.outputs.ext_id }}" --json 2>/dev/null \
+              | jq -e --arg v "${{ steps.meta.outputs.version }}" 'any(.versions[]; .version == $v)' >/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -75,7 +77,7 @@ jobs:
             echo "Error: VSCE_PAT is not set in GitHub Secrets."
             exit 1
           fi
-          npx vsce publish --packagePath "${{ steps.meta.outputs.vsix_file }}" -p "$VSCE_PAT" --no-verify
+          npx vsce publish --packagePath "${{ steps.meta.outputs.vsix_file }}" --no-verify
 
       - name: Skip Logic
         if: steps.check.outputs.exists == 'true'

@@ -1,16 +1,23 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "nodenext",
     "target": "ES2020",
     "outDir": "out",
-    "lib": ["ES2020"],
+    "lib": [
+      "ES2020"
+    ],
     "sourceMap": true,
     "rootDir": "src",
     "strict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "node",
-    "types": ["node", "vscode"]
+    "moduleResolution": "nodenext",
+    "types": [
+      "node",
+      "vscode"
+    ]
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

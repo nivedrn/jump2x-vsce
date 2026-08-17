@@ -8,6 +8,14 @@ export function isGitRepository(entries: [string, vscode.FileType][]): boolean {
   return entries.some(([name]) => name === '.git');
 }
 
+export function directoryHasMarker(entries: [string, vscode.FileType][], markers: string[]): boolean {
+  if (markers.length === 0) {
+    return false;
+  }
+  const names = new Set(entries.map(([name]) => name));
+  return markers.some((marker) => names.has(marker));
+}
+
 export function isIgnoredDirectory(name: string): boolean {
   const ignored = new Set(['.git', '.svn', 'node_modules', '.hg']);
   return ignored.has(name);

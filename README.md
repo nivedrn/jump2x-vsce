@@ -33,8 +33,11 @@ Configure these settings from VS Code Settings by searching for `Jump2x`:
 	- `0` scans only the root folder.
 	- `1` includes direct child folders.
 	- `-1` means unlimited depth.
-- `jump2x.includeCodeWorkspaceFiles` (boolean)
-	- If true, include discovered `.code-workspace` files.
+- `jump2x.workspaceMarkers` (array)
+	- Markers that identify a folder as a workspace. A folder is listed when it contains any of these entries (e.g. `.git`, `.vscode`).
+	- `.code-workspace` matches VS Code workspace files by suffix.
+- `jump2x.includeWorktrees` (boolean)
+	- If true, list git worktrees underneath their repository.
 
 ## Commands and interactions
 

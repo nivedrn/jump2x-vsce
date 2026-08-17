@@ -1,8 +1,9 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Jump2xSettings, DiscoveredWorkspace } from '../types';
-import { isCodeWorkspaceFile, isGitRepository, isIgnoredDirectory, shouldTraverseDirectory } from '../utils/discoveryUtils';
+import { Jump2xSettings, DiscoveredWorkspace, WorktreeInfo } from '../types';
+import { directoryHasMarker, isCodeWorkspaceFile, isGitRepository, isIgnoredDirectory, shouldTraverseDirectory } from '../utils/discoveryUtils';
 import { workspacePathKey } from '../utils/pathUtils';
+import { getWorktrees } from '../utils/worktreeUtils';
 
 interface DirectoryQueueItem {
   uri: vscode.Uri;
@@ -26,7 +27,8 @@ export class DiscoveryService {
         .filter(Boolean),
       recursiveScan: config.get<boolean>('recursiveScan', true),
       maxScanDepth: this.normalizeMaxScanDepth(config.get<number>('maxScanDepth', -1)),
-      includeCodeWorkspaceFiles: config.get<boolean>('includeCodeWorkspaceFiles', true),
+      workspaceMarkers: this.normalizeMarkers(config.get<string[]>('workspaceMarkers', ['.git', '.code-workspace'])),
+      includeWorktrees: config.get<boolean>('includeWorktrees', true),
     };
   }
 
@@ -39,6 +41,7 @@ export class DiscoveryService {
 
     const dedup = new Map<string, DiscoveredWorkspace>();
     const excludedKeys = new Set(settings.excludedDirectories.map((d) => workspacePathKey(d)));
+    const gitRepoKeys = new Set<string>();
     const warnings: string[] = [];
 
     for (const rootPath of settings.workspacesDirectories) {
@@ -47,19 +50,51 @@ export class DiscoveryService {
         warnings.push(`Configured path does not exist: ${rootPath}`);
         continue;
       }
-      await this.scanRoot(root, settings, dedup, excludedKeys);
+      await this.scanRoot(root, settings, dedup, excludedKeys, gitRepoKeys);
+    }
+
+    if (settings.includeWorktrees) {
+      await this.attachWorktrees(dedup, gitRepoKeys);
     }
 
     const items = Array.from(dedup.values()).sort((a, b) => a.label.localeCompare(b.label));
     return { items, warning: warnings.length > 0 ? warnings.join('\n') : undefined };
   }
 
+  public getWorktrees(repoPath: string): Promise<WorktreeInfo[]> {
+    return getWorktrees(repoPath);
+  }
+
+  // Attaches git worktrees to each discovered repo and removes any worktree
+  // path that was independently discovered as its own top-level entry.
+  private async attachWorktrees(dedup: Map<string, DiscoveredWorkspace>, gitRepoKeys: Set<string>): Promise<void> {
+    const repos = Array.from(dedup.values()).filter((item) => gitRepoKeys.has(workspacePathKey(item.path)));
+
+    await Promise.all(
+      repos.map(async (repo) => {
+        const worktrees = await getWorktrees(repo.path);
+        if (worktrees.length > 0) {
+          repo.worktrees = worktrees;
+        }
+      })
+    );
+
+    for (const repo of repos) {
+      for (const worktree of repo.worktrees ?? []) {
+        dedup.delete(workspacePathKey(worktree.path));
+      }
+    }
+  }
+
   private async scanRoot(
     root: vscode.Uri,
     settings: Jump2xSettings,
     dedup: Map<string, DiscoveredWorkspace>,
-    excludedKeys: Set<string>
+    excludedKeys: Set<string>,
+    gitRepoKeys: Set<string>
   ): Promise<void> {
+    const directoryMarkers = settings.workspaceMarkers.filter((marker) => marker !== '.code-workspace');
+    const includeCodeWorkspace = settings.workspaceMarkers.includes('.code-workspace');
     const queue: DirectoryQueueItem[] = [{ uri: root, depth: 0 }];
 
     while (queue.length > 0) {
@@ -75,16 +110,20 @@ export class DiscoveryService {
         continue;
       }
 
-      // Check if current directory is a git repository
-      const isCurrentGitRepo = current.depth > 0 && isGitRepository(entries);
-      if (isCurrentGitRepo) {
+      // Check if current directory matches a configured workspace marker.
+      const isCurrentWorkspace = current.depth > 0 && directoryHasMarker(entries, directoryMarkers);
+      if (isCurrentWorkspace) {
         const folderName = current.uri.fsPath.split(path.sep).pop() || '';
+        const normalizedPath = path.normalize(current.uri.fsPath);
         this.upsertDiscovered(dedup, {
-          path: path.normalize(current.uri.fsPath),
+          path: normalizedPath,
           uri: current.uri.toString(),
           label: folderName,
           isCodeWorkspaceFile: false,
         });
+        if (isGitRepository(entries)) {
+          gitRepoKeys.add(workspacePathKey(normalizedPath));
+        }
       }
 
       for (const [name, fileType] of entries) {
@@ -93,7 +132,7 @@ export class DiscoveryService {
 
         if (fileType === vscode.FileType.Directory) {
           if (
-            !isCurrentGitRepo &&
+            !isCurrentWorkspace &&
             shouldTraverseDirectory(current.depth, settings.recursiveScan, settings.maxScanDepth) &&
             !isIgnoredDirectory(name) &&
             !excludedKeys.has(workspacePathKey(childPath))
@@ -104,7 +143,7 @@ export class DiscoveryService {
 
         if (
           fileType === vscode.FileType.File &&
-          settings.includeCodeWorkspaceFiles &&
+          includeCodeWorkspace &&
           isCodeWorkspaceFile(name)
         ) {
           this.upsertDiscovered(dedup, {
@@ -140,5 +179,12 @@ export class DiscoveryService {
     }
 
     return Math.floor(value);
+  }
+
+  private normalizeMarkers(markers: string[]): string[] {
+    if (!Array.isArray(markers)) {
+      return [];
+    }
+    return Array.from(new Set(markers.map((marker) => marker.trim()).filter(Boolean)));
   }
 }
