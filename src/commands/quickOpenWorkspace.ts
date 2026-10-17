@@ -24,6 +24,7 @@ interface WorkspaceQuickPickItem extends vscode.QuickPickItem {
   uri?: vscode.Uri;
   isFavorite?: boolean;
   section?: 'favorite' | 'discovered' | 'worktree' | 'placeholder';
+  shortcut?: string;
   buttons?: vscode.QuickInputButton[];
 }
 
@@ -79,6 +80,7 @@ function buildQuickPickItems(
         uri: vscode.Uri.parse(favorite.uri),
         isFavorite: true,
         section: 'favorite',
+        shortcut: `${favCount}`,
         buttons: [REMOVE_FAVORITE_BUTTON],
       });
       totalCount++;
@@ -87,13 +89,15 @@ function buildQuickPickItems(
       let letter = 0;
       for (const worktree of worktrees) {
         if (itemLimit !== -1 && totalCount >= itemLimit) break;
+        const shortcut = `${favCount}${worktreeSuffix(letter)}`;
         items.push({
-          label: `${favCount}${worktreeSuffix(letter)} $(git-branch) ${worktree.label}`,
+          label: `${shortcut} $(git-branch) ${worktree.label}`,
           description: worktree.path,
           path: worktree.path,
           uri: vscode.Uri.parse(worktree.uri),
           isFavorite: false,
           section: 'worktree',
+          shortcut,
         });
         letter++;
         totalCount++;
@@ -162,6 +166,20 @@ function cleanWorkspaceLabel(label: string): string {
   return label.replace(/^\d+[a-z]?(?:-\d+)?\s+/, '').replace(/^\$\([^)]+\)\s/, '').trim();
 }
 
+// While filtering, VS Code re-sorts matches with shorter labels first, so typing
+// "1" can rank "1b fix" or "10 api" above "1 my-project". Activate the entry whose
+// shortcut exactly matches the typed value so Enter always opens that entry.
+function activateShortcutItem(quickPick: vscode.QuickPick<WorkspaceQuickPickItem>): void {
+  const value = quickPick.value.trim().toLowerCase();
+  if (!value) {
+    return;
+  }
+  const match = quickPick.items.find((item) => item.shortcut === value);
+  if (match) {
+    quickPick.activeItems = [match];
+  }
+}
+
 export async function quickOpenWorkspace(
   storageManager: StorageManager,
   discoveryService: DiscoveryService
@@ -174,7 +192,11 @@ export async function quickOpenWorkspace(
 
   const quickPick = vscode.window.createQuickPick<WorkspaceQuickPickItem>();
   const itemLimit = vscode.workspace.getConfiguration('jump2x').get<number>('quickPickItemLimit', 20);
-  quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, true, itemLimit);
+  const setItems = (items: WorkspaceQuickPickItem[]) => {
+    quickPick.items = items;
+    activateShortcutItem(quickPick);
+  };
+  setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, true, itemLimit));
   quickPick.placeholder = 'Select a workspace to open (type 1 for a favorite, 1a/1b for its worktrees)';
   quickPick.matchOnDescription = true;
   quickPick.busy = true;
@@ -190,7 +212,7 @@ export async function quickOpenWorkspace(
         }
       })
     ).then(() => {
-      quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, quickPick.busy, itemLimit);
+      setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, quickPick.busy, itemLimit));
     }).catch(() => {
       /* worktree lookup is best-effort */
     });
@@ -201,11 +223,11 @@ export async function quickOpenWorkspace(
     discoveredItems = discovered.items;
     discoveryWarning = discovered.warning;
     hidden = storageManager.getHidden();
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, false, itemLimit);
+    setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, false, itemLimit));
     quickPick.busy = false;
   }).catch((error: unknown) => {
     discoveryWarning = error instanceof Error ? error.message : 'Failed to discover workspaces.';
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, false, itemLimit);
+    setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, false, itemLimit));
     quickPick.busy = false;
   });
 
@@ -231,7 +253,7 @@ export async function quickOpenWorkspace(
 
     favorites = storageManager.getFavorites();
     hidden = storageManager.getHidden();
-    quickPick.items = buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, false, itemLimit);
+    setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, false, itemLimit));
   };
 
   let lastInteractiveItem: WorkspaceQuickPickItem | undefined;
@@ -241,6 +263,10 @@ export async function quickOpenWorkspace(
 
     quickPick.onDidTriggerItemButton((e) => {
       handleButtonClick(e);
+    });
+
+    quickPick.onDidChangeValue(() => {
+      activateShortcutItem(quickPick);
     });
 
     quickPick.onDidChangeSelection((items) => {
