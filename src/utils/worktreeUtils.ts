@@ -1,4 +1,5 @@
 import { execFile } from 'child_process';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { WorktreeInfo } from '../types';
@@ -55,6 +56,28 @@ export async function getWorktrees(repoPath: string): Promise<WorktreeInfo[]> {
     }
 
     return parseWorktrees(output, repoPath);
+}
+
+// True when folderPath is (inside) a linked worktree created by `git worktree add`:
+// its git dir differs from the repository's common git dir. False for the main
+// worktree, submodules, non-repos, files, or when git is unavailable.
+export async function isLinkedWorktree(folderPath: string): Promise<boolean> {
+    const output = await runGit(folderPath, ['rev-parse', '--git-dir', '--git-common-dir']);
+    const [gitDir, commonDir] = output.split(/\r?\n/).map((line) => line.trim());
+    if (!gitDir || !commonDir) {
+        return false;
+    }
+
+    try {
+        // git may print either path relative to the folder; resolve symlinks so
+        // the same directory reached two ways still compares equal.
+        const [realGitDir, realCommonDir] = await Promise.all(
+            [gitDir, commonDir].map((dir) => fs.realpath(path.resolve(folderPath, dir)))
+        );
+        return workspacePathKey(realGitDir) !== workspacePathKey(realCommonDir);
+    } catch {
+        return false;
+    }
 }
 
 // Returns the `git status --porcelain` lines for a worktree: modified, staged

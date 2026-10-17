@@ -16,6 +16,7 @@ Jump2x helps you quickly jump between workspaces with favorites, discovery, and 
 - Inline quick actions in quick open for discovered items:
 	- Add to favorites
 	- Hide workspace
+- Git worktrees are listed under their repository and cannot be added to favorites.
 - Delete a git worktree from the Jump2x view or quick open (trash icon on the worktree). The worktree folder is removed and its branch is kept. Deletion is refused when the worktree is open in the current window or has uncommitted or untracked changes.
 - Open selected workspace in a new VS Code window.
 

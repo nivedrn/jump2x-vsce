@@ -291,7 +291,11 @@ export async function quickOpenWorkspace(
       await storageManager.removeFavorite(item.path);
     } else {
       // Add to favorites
-      await storageManager.addFavorite(item.uri, cleanWorkspaceLabel(item.label));
+      const result = await storageManager.addFavorite(item.uri, cleanWorkspaceLabel(item.label));
+      if (!result.added) {
+        vscode.window.showInformationMessage(result.reason ?? 'Workspace is already in favorites.');
+        return;
+      }
     }
 
     favorites = storageManager.getFavorites();
