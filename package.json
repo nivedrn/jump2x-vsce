@@ -98,7 +98,7 @@
       "view/title": [
         {
           "command": "jump2x.addCurrentWorkspace",
-          "when": "view == jump2x.workspaceExplorer",
+          "when": "view == jump2x.workspaceExplorer && !jump2x.currentWorkspaceIsWorktree",
           "group": "navigation@1"
         },
         {
@@ -125,7 +125,7 @@
         },
         {
           "command": "jump2x.hideWorkspace",
-          "when": "view == jump2x.workspaceExplorer && viewItem == discoveredWorkspace",
+          "when": "view == jump2x.workspaceExplorer && viewItem =~ /^discovered(Workspace|Worktree)$/",
           "group": "inline"
         },
         {
@@ -140,6 +140,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "jump2x.addCurrentWorkspace",
+          "when": "!jump2x.currentWorkspaceIsWorktree"
+        },
         {
           "command": "jump2x.openWorkspace",
           "when": "false"

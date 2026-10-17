@@ -139,13 +139,14 @@ function buildQuickPickItems(
     for (const item of discoveredOnly) {
       if (itemLimit !== -1 && totalCount >= itemLimit) break;
       items.push({
-        label: `${workspaceLabelIcon(item.isCodeWorkspaceFile)} ${item.label}`,
+        label: `${item.isWorktree ? '$(git-branch)' : workspaceLabelIcon(item.isCodeWorkspaceFile)} ${item.label}`,
         description: item.path,
         path: item.path,
         uri: vscode.Uri.parse(item.uri),
         isFavorite: false,
         section: 'discovered',
-        buttons: [ADD_FAVORITE_BUTTON, HIDE_WORKSPACE_BUTTON],
+        // Worktrees cannot be favorited, so only offer hiding them.
+        buttons: item.isWorktree ? [HIDE_WORKSPACE_BUTTON] : [ADD_FAVORITE_BUTTON, HIDE_WORKSPACE_BUTTON],
       });
       totalCount++;
 
