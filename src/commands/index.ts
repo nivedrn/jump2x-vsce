@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { addCurrentWorkspace } from './addCurrentWorkspace';
+import { deleteWorktree } from './deleteWorktree';
 import { openWorkspace } from './openWorkspace';
 import { quickOpenWorkspace } from './quickOpenWorkspace';
 import { removeFavorite } from './removeFavorite';
@@ -47,11 +48,17 @@ export function registerCommands(
       }
       await restoreWorkspace(storageManager, provider, target);
     }),
+    vscode.commands.registerCommand('jump2x.deleteWorktree', async (target?: WorkspaceTreeItem) => {
+      if (!target) {
+        return;
+      }
+      await deleteWorktree(provider, target);
+    }),
     vscode.commands.registerCommand('jump2x.openSettings', async () => {
       await vscode.commands.executeCommand('workbench.action.openSettings', 'jump2x');
     }),
     vscode.commands.registerCommand('jump2x.quickOpenWorkspace', async () => {
-      await quickOpenWorkspace(storageManager, discoveryService);
+      await quickOpenWorkspace(storageManager, discoveryService, provider);
     })
   );
 }

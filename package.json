@@ -20,6 +20,7 @@
     "onCommand:jump2x.removeFavorite",
     "onCommand:jump2x.hideWorkspace",
     "onCommand:jump2x.restoreWorkspace",
+    "onCommand:jump2x.deleteWorktree",
     "onCommand:jump2x.openSettings"
   ],
   "main": "./out/extension.js",
@@ -67,6 +68,12 @@
         "title": "Jump2x: Restore Workspace",
         "category": "Jump2x",
         "icon": "$(eye)"
+      },
+      {
+        "command": "jump2x.deleteWorktree",
+        "title": "Jump2x: Delete Worktree",
+        "category": "Jump2x",
+        "icon": "$(trash)"
       },
       {
         "command": "jump2x.openSettings",
@@ -125,6 +132,11 @@
           "command": "jump2x.restoreWorkspace",
           "when": "view == jump2x.workspaceExplorer && viewItem == hiddenWorkspace",
           "group": "inline"
+        },
+        {
+          "command": "jump2x.deleteWorktree",
+          "when": "view == jump2x.workspaceExplorer && viewItem == worktreeWorkspace",
+          "group": "inline"
         }
       ],
       "commandPalette": [
@@ -142,6 +154,10 @@
         },
         {
           "command": "jump2x.restoreWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "jump2x.deleteWorktree",
           "when": "false"
         }
       ]

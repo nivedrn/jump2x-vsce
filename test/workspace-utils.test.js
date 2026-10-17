@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   normalizeWorkspacePath,
+  isSameOrInsidePath,
   sameWorkspacePath,
   workspacePathKey,
 } = require('../out/utils/pathUtils.js');
@@ -42,4 +43,11 @@ test('shouldTraverseDirectory only descends from root when recursive scan is dis
   assert.equal(shouldTraverseDirectory(0, true, 1), true);
   assert.equal(shouldTraverseDirectory(1, true, 1), false);
   assert.equal(shouldTraverseDirectory(1, true, 2), true);
+});
+
+test('isSameOrInsidePath matches the folder itself and nested folders only', () => {
+  assert.equal(isSameOrInsidePath('/work/repo-wt', '/work/repo-wt/', 'linux'), true);
+  assert.equal(isSameOrInsidePath('/work/repo-wt/src/app', '/work/repo-wt', 'linux'), true);
+  assert.equal(isSameOrInsidePath('/work/repo-wt-2', '/work/repo-wt', 'linux'), false);
+  assert.equal(isSameOrInsidePath('/work', '/work/repo-wt', 'linux'), false);
 });

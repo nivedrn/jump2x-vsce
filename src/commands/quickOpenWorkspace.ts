@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
+import { WorkspaceTreeProvider } from '../providers/workspaceTreeProvider';
 import { DiscoveryService } from '../services/discoveryService';
 import { StorageManager } from '../storage/storageManager';
 import { DiscoveredWorkspace, FavoriteWorkspace, HiddenWorkspace, WorktreeInfo } from '../types';
 import { workspacePathKey } from '../utils/pathUtils';
+import { confirmAndDeleteWorktree } from './deleteWorktree';
 
 const REMOVE_FAVORITE_BUTTON: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('trash'),
@@ -19,9 +21,15 @@ const HIDE_WORKSPACE_BUTTON: vscode.QuickInputButton = {
   tooltip: 'Hide workspace',
 };
 
+const DELETE_WORKTREE_BUTTON: vscode.QuickInputButton = {
+  iconPath: new vscode.ThemeIcon('trash'),
+  tooltip: 'Delete worktree',
+};
+
 interface WorkspaceQuickPickItem extends vscode.QuickPickItem {
   path?: string;
   uri?: vscode.Uri;
+  repoPath?: string;
   isFavorite?: boolean;
   section?: 'favorite' | 'discovered' | 'worktree' | 'placeholder';
   shortcut?: string;
@@ -95,9 +103,11 @@ function buildQuickPickItems(
           description: worktree.path,
           path: worktree.path,
           uri: vscode.Uri.parse(worktree.uri),
+          repoPath: favorite.path,
           isFavorite: false,
           section: 'worktree',
           shortcut,
+          buttons: [DELETE_WORKTREE_BUTTON],
         });
         letter++;
         totalCount++;
@@ -139,7 +149,7 @@ function buildQuickPickItems(
       });
       totalCount++;
 
-      const worktrees = item.worktrees ?? worktreesByPath.get(workspacePathKey(item.path)) ?? [];
+      const worktrees = worktreesByPath.get(workspacePathKey(item.path)) ?? [];
       for (const worktree of worktrees) {
         if (itemLimit !== -1 && totalCount >= itemLimit) break;
         items.push({
@@ -147,8 +157,10 @@ function buildQuickPickItems(
           description: worktree.path,
           path: worktree.path,
           uri: vscode.Uri.parse(worktree.uri),
+          repoPath: item.path,
           isFavorite: false,
           section: 'worktree',
+          buttons: [DELETE_WORKTREE_BUTTON],
         });
         totalCount++;
       }
@@ -163,7 +175,7 @@ function isOpenableItem(item: WorkspaceQuickPickItem | undefined): item is Works
 }
 
 function cleanWorkspaceLabel(label: string): string {
-  return label.replace(/^\d+[a-z]?(?:-\d+)?\s+/, '').replace(/^\$\([^)]+\)\s/, '').trim();
+  return label.trim().replace(/^\d+[a-z]?(?:-\d+)?\s+/, '').replace(/^\$\([^)]+\)\s/, '').trim();
 }
 
 // While filtering, VS Code re-sorts matches with shorter labels first, so typing
@@ -182,12 +194,15 @@ function activateShortcutItem(quickPick: vscode.QuickPick<WorkspaceQuickPickItem
 
 export async function quickOpenWorkspace(
   storageManager: StorageManager,
-  discoveryService: DiscoveryService
+  discoveryService: DiscoveryService,
+  provider: WorkspaceTreeProvider
 ): Promise<void> {
   let favorites = storageManager.getFavorites();
   let hidden = storageManager.getHidden();
   let discoveredItems: DiscoveredWorkspace[] = [];
   let discoveryWarning: string | undefined;
+  // Worktrees for both favorites and discovered repos, keyed by repo path, so a
+  // repo keeps its worktrees when it is starred or unstarred in the picker.
   const worktreesByPath = new Map<string, WorktreeInfo[]>();
 
   const quickPick = vscode.window.createQuickPick<WorkspaceQuickPickItem>();
@@ -207,8 +222,9 @@ export async function quickOpenWorkspace(
     Promise.all(
       favorites.map(async (favorite) => {
         const worktrees = await discoveryService.getWorktrees(favorite.path);
-        if (worktrees.length > 0) {
-          worktreesByPath.set(workspacePathKey(favorite.path), worktrees);
+        const key = workspacePathKey(favorite.path);
+        if (worktrees.length > 0 && !worktreesByPath.has(key)) {
+          worktreesByPath.set(key, worktrees);
         }
       })
     ).then(() => {
@@ -222,6 +238,12 @@ export async function quickOpenWorkspace(
   discoveryService.discoverWorkspaces().then((discovered) => {
     discoveredItems = discovered.items;
     discoveryWarning = discovered.warning;
+    for (const item of discoveredItems) {
+      const key = workspacePathKey(item.path);
+      if (item.worktrees?.length && !worktreesByPath.has(key)) {
+        worktreesByPath.set(key, item.worktrees);
+      }
+    }
     hidden = storageManager.getHidden();
     setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, false, itemLimit));
     quickPick.busy = false;
@@ -237,7 +259,28 @@ export async function quickOpenWorkspace(
       return;
     }
 
-    if (e.button === HIDE_WORKSPACE_BUTTON) {
+    if (e.button === DELETE_WORKTREE_BUTTON) {
+      if (!item.repoPath) {
+        return;
+      }
+      // Keep the picker open while the confirmation dialog has focus.
+      quickPick.ignoreFocusOut = true;
+      let deleted: boolean;
+      try {
+        deleted = await confirmAndDeleteWorktree(item.repoPath, item.path, cleanWorkspaceLabel(item.label));
+      } finally {
+        quickPick.ignoreFocusOut = false;
+      }
+      if (!deleted) {
+        return;
+      }
+      const repoKey = workspacePathKey(item.repoPath);
+      const deletedKey = workspacePathKey(item.path);
+      worktreesByPath.set(
+        repoKey,
+        (worktreesByPath.get(repoKey) ?? []).filter((worktree) => workspacePathKey(worktree.path) !== deletedKey)
+      );
+    } else if (e.button === HIDE_WORKSPACE_BUTTON) {
       await storageManager.hideWorkspace({
         path: item.path,
         uri: item.uri.toString(),
@@ -254,6 +297,8 @@ export async function quickOpenWorkspace(
     favorites = storageManager.getFavorites();
     hidden = storageManager.getHidden();
     setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, false, itemLimit));
+    // Keep the Jump2x sidebar in sync with changes made from the picker.
+    void provider.refresh();
   };
 
   let lastInteractiveItem: WorkspaceQuickPickItem | undefined;
