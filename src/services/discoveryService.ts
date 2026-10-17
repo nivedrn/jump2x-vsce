@@ -3,11 +3,16 @@ import * as vscode from 'vscode';
 import { Jump2xSettings, DiscoveredWorkspace, WorktreeInfo } from '../types';
 import { directoryHasMarker, isCodeWorkspaceFile, isGitRepository, isIgnoredDirectory, shouldTraverseDirectory } from '../utils/discoveryUtils';
 import { workspacePathKey } from '../utils/pathUtils';
-import { getWorktrees } from '../utils/worktreeUtils';
+import { getWorktrees, isLinkedWorktree } from '../utils/worktreeUtils';
 
 interface DirectoryQueueItem {
   uri: vscode.Uri;
   depth: number;
+}
+
+// Linked worktrees (and submodules) have a `.git` file instead of a directory.
+function hasGitFile(entries: [string, vscode.FileType][]): boolean {
+  return entries.some(([name, fileType]) => name === '.git' && (fileType & vscode.FileType.File) !== 0);
 }
 
 export class DiscoveryService {
@@ -42,6 +47,7 @@ export class DiscoveryService {
     const dedup = new Map<string, DiscoveredWorkspace>();
     const excludedKeys = new Set(settings.excludedDirectories.map((d) => workspacePathKey(d)));
     const gitRepoKeys = new Set<string>();
+    const gitFileKeys = new Set<string>();
     const warnings: string[] = [];
 
     for (const rootPath of settings.workspacesDirectories) {
@@ -50,9 +56,10 @@ export class DiscoveryService {
         warnings.push(`Configured path does not exist: ${rootPath}`);
         continue;
       }
-      await this.scanRoot(root, settings, dedup, excludedKeys, gitRepoKeys);
+      await this.scanRoot(root, settings, dedup, excludedKeys, gitRepoKeys, gitFileKeys);
     }
 
+    await this.markLinkedWorktrees(dedup, gitFileKeys);
     if (settings.includeWorktrees) {
       await this.attachWorktrees(dedup, gitRepoKeys);
     }
@@ -68,7 +75,10 @@ export class DiscoveryService {
   // Attaches git worktrees to each discovered repo and removes any worktree
   // path that was independently discovered as its own top-level entry.
   private async attachWorktrees(dedup: Map<string, DiscoveredWorkspace>, gitRepoKeys: Set<string>): Promise<void> {
-    const repos = Array.from(dedup.values()).filter((item) => gitRepoKeys.has(workspacePathKey(item.path)));
+    // A linked worktree would list its main repo and siblings as its own worktrees.
+    const repos = Array.from(dedup.values()).filter(
+      (item) => gitRepoKeys.has(workspacePathKey(item.path)) && !item.isWorktree
+    );
 
     await Promise.all(
       repos.map(async (repo) => {
@@ -86,12 +96,26 @@ export class DiscoveryService {
     }
   }
 
+  // Flags discovered entries that are themselves linked worktrees. Only folders
+  // with a `.git` file can be one, so git runs just for those.
+  private async markLinkedWorktrees(dedup: Map<string, DiscoveredWorkspace>, gitFileKeys: Set<string>): Promise<void> {
+    await Promise.all(
+      Array.from(gitFileKeys).map(async (key) => {
+        const item = dedup.get(key);
+        if (item && (await isLinkedWorktree(item.path))) {
+          item.isWorktree = true;
+        }
+      })
+    );
+  }
+
   private async scanRoot(
     root: vscode.Uri,
     settings: Jump2xSettings,
     dedup: Map<string, DiscoveredWorkspace>,
     excludedKeys: Set<string>,
-    gitRepoKeys: Set<string>
+    gitRepoKeys: Set<string>,
+    gitFileKeys: Set<string>
   ): Promise<void> {
     const directoryMarkers = settings.workspaceMarkers.filter((marker) => marker !== '.code-workspace');
     const includeCodeWorkspace = settings.workspaceMarkers.includes('.code-workspace');
@@ -123,6 +147,9 @@ export class DiscoveryService {
         });
         if (isGitRepository(entries)) {
           gitRepoKeys.add(workspacePathKey(normalizedPath));
+        }
+        if (hasGitFile(entries)) {
+          gitFileKeys.add(workspacePathKey(normalizedPath));
         }
       }
 

@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { FAVORITES_STORAGE_KEY, HIDDEN_STORAGE_KEY, FavoriteWorkspace, HiddenWorkspace } from '../types';
 import { normalizeWorkspacePath, sameWorkspacePath } from '../utils/pathUtils';
+import { isLinkedWorktree } from '../utils/worktreeUtils';
 
 export class StorageManager {
   private readonly context: vscode.ExtensionContext;
@@ -32,6 +33,10 @@ export class StorageManager {
 
     if (favorites.some((favorite) => sameWorkspacePath(favorite.path, normalized))) {
       return { added: false, reason: 'This workspace is already in favorites.' };
+    }
+
+    if (await isLinkedWorktree(normalized)) {
+      return { added: false, reason: 'Git worktrees cannot be added to favorites. They are listed under their repository.' };
     }
 
     const label = customLabel?.trim() || path.basename(normalized) || normalized;

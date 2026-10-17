@@ -19,6 +19,9 @@ export interface DiscoveredWorkspace {
   uri: string;
   label: string;
   isCodeWorkspaceFile: boolean;
+  // Set when this entry is itself a linked git worktree (its main repo was not
+  // discovered). Such entries cannot be favorited.
+  isWorktree?: boolean;
   worktrees?: WorktreeInfo[];
 }
 

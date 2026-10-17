@@ -14,6 +14,7 @@ export interface WorkspaceNodeData {
   label: string;
   uri?: vscode.Uri;
   path?: string;
+  repoPath?: string;
 }
 
 export class WorkspaceTreeItem extends vscode.TreeItem {
@@ -237,7 +238,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
   }
 
   private discoveredToTreeItem(item: DiscoveredWorkspace): WorkspaceTreeItem {
-    return new WorkspaceTreeItem(
+    const treeItem = new WorkspaceTreeItem(
       {
         id: `jump2x:discovered:${item.path}`,
         kind: 'discoveredWorkspace',
@@ -247,6 +248,14 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
       },
       this.collapsibleStateForRepo(item.path)
     );
+
+    if (item.isWorktree) {
+      // Worktrees cannot be favorited; this context value hides the star action.
+      treeItem.contextValue = 'discoveredWorktree';
+      treeItem.iconPath = new vscode.ThemeIcon('git-branch');
+    }
+
+    return treeItem;
   }
 
   private worktreeToTreeItem(repoPath: string, worktree: WorktreeInfo): WorkspaceTreeItem {
@@ -257,6 +266,7 @@ export class WorkspaceTreeProvider implements vscode.TreeDataProvider<WorkspaceT
         label: worktree.label,
         uri: vscode.Uri.parse(worktree.uri),
         path: worktree.path,
+        repoPath,
       },
       vscode.TreeItemCollapsibleState.None
     );

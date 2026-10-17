@@ -3,6 +3,7 @@ import { registerCommands } from './commands';
 import { WorkspaceTreeProvider } from './providers/workspaceTreeProvider';
 import { DiscoveryService } from './services/discoveryService';
 import { StorageManager } from './storage/storageManager';
+import { isLinkedWorktree } from './utils/worktreeUtils';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const storageManager = new StorageManager(context);
@@ -16,8 +17,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   registerCommands(context, storageManager, provider, discoveryService);
 
+  // Hides "Add Current Workspace to Favorites" while this window is a git worktree.
+  const updateWorktreeContext = async () => {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    const isWorktree = folder?.uri.scheme === 'file' && (await isLinkedWorktree(folder.uri.fsPath));
+    await vscode.commands.executeCommand('setContext', 'jump2x.currentWorkspaceIsWorktree', isWorktree);
+  };
+  void updateWorktreeContext();
+
   context.subscriptions.push(
     treeView,
+    vscode.workspace.onDidChangeWorkspaceFolders(() => updateWorktreeContext()),
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (
         event.affectsConfiguration('jump2x.workspacesDirectories') ||

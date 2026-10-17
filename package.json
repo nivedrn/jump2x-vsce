@@ -2,7 +2,7 @@
   "name": "jump2x",
   "displayName": "Jump2x",
   "description": "Quickly open and manage favorite and discovered workspaces.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "devn",
   "engines": {
     "vscode": "^1.90.0"
@@ -20,6 +20,7 @@
     "onCommand:jump2x.removeFavorite",
     "onCommand:jump2x.hideWorkspace",
     "onCommand:jump2x.restoreWorkspace",
+    "onCommand:jump2x.deleteWorktree",
     "onCommand:jump2x.openSettings"
   ],
   "main": "./out/extension.js",
@@ -69,6 +70,12 @@
         "icon": "$(eye)"
       },
       {
+        "command": "jump2x.deleteWorktree",
+        "title": "Jump2x: Delete Worktree",
+        "category": "Jump2x",
+        "icon": "$(trash)"
+      },
+      {
         "command": "jump2x.openSettings",
         "title": "Jump2x: Open Settings",
         "category": "Jump2x",
@@ -91,7 +98,7 @@
       "view/title": [
         {
           "command": "jump2x.addCurrentWorkspace",
-          "when": "view == jump2x.workspaceExplorer",
+          "when": "view == jump2x.workspaceExplorer && !jump2x.currentWorkspaceIsWorktree",
           "group": "navigation@1"
         },
         {
@@ -118,16 +125,25 @@
         },
         {
           "command": "jump2x.hideWorkspace",
-          "when": "view == jump2x.workspaceExplorer && viewItem == discoveredWorkspace",
+          "when": "view == jump2x.workspaceExplorer && viewItem =~ /^discovered(Workspace|Worktree)$/",
           "group": "inline"
         },
         {
           "command": "jump2x.restoreWorkspace",
           "when": "view == jump2x.workspaceExplorer && viewItem == hiddenWorkspace",
           "group": "inline"
+        },
+        {
+          "command": "jump2x.deleteWorktree",
+          "when": "view == jump2x.workspaceExplorer && viewItem == worktreeWorkspace",
+          "group": "inline"
         }
       ],
       "commandPalette": [
+        {
+          "command": "jump2x.addCurrentWorkspace",
+          "when": "!jump2x.currentWorkspaceIsWorktree"
+        },
         {
           "command": "jump2x.openWorkspace",
           "when": "false"
@@ -142,6 +158,10 @@
         },
         {
           "command": "jump2x.restoreWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "jump2x.deleteWorktree",
           "when": "false"
         }
       ]
