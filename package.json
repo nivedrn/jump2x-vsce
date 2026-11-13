@@ -235,7 +235,7 @@
         "jump2x.quickPickItemLimit": {
           "type": "number",
           "default": 20,
-          "description": "Maximum number of items to show in the quick open dropdown (favorites + discovered). Set to -1 for unlimited."
+          "description": "Maximum number of discovered workspaces (and their worktrees) to show in the quick open dropdown. Favorites and their worktrees are always shown. Set to -1 for unlimited."
         }
       }
     }
