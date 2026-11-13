@@ -4,6 +4,7 @@ import { DiscoveryService } from '../services/discoveryService';
 import { StorageManager } from '../storage/storageManager';
 import { DiscoveredWorkspace, FavoriteWorkspace, HiddenWorkspace, WorktreeInfo } from '../types';
 import { workspacePathKey } from '../utils/pathUtils';
+import { padLabelsToKeepOrder, shortcutMatches, stripSortPadding, worktreeSuffix } from '../utils/shortcutUtils';
 import { confirmAndDeleteWorktree } from './deleteWorktree';
 
 const REMOVE_FAVORITE_BUTTON: vscode.QuickInputButton = {
@@ -40,14 +41,6 @@ function isCodeWorkspacePath(value: string): boolean {
   return value.toLowerCase().endsWith('.code-workspace');
 }
 
-// Maps 0,1,2... to a,b,c... so favorite N's worktrees are Na, Nb, Nc.
-function worktreeSuffix(index: number): string {
-  if (index < 26) {
-    return String.fromCharCode(97 + index);
-  }
-  return `-${index + 1}`;
-}
-
 function workspaceLabelIcon(isCodeWorkspaceFile: boolean): string {
   return isCodeWorkspaceFile ? '$(file-code)' : '$(repo)';
 }
@@ -63,7 +56,9 @@ function buildQuickPickItems(
 ): WorkspaceQuickPickItem[] {
   const items: WorkspaceQuickPickItem[] = [];
   let favCount = 1;
-  let totalCount = 0;
+  // Favorites and their worktrees are always listed so every shortcut (1, 1a, 10,
+  // 10a, ...) can be typed; itemLimit only caps the Discovered section.
+  let discoveredCount = 0;
 
   items.push({
     kind: vscode.QuickPickItemKind.Separator,
@@ -79,7 +74,6 @@ function buildQuickPickItems(
     });
   } else {
     for (const favorite of favorites) {
-      if (itemLimit !== -1 && totalCount >= itemLimit) break;
       const isCodeWorkspaceFile = isCodeWorkspacePath(favorite.path);
       items.push({
         label: `${favCount} ${workspaceLabelIcon(isCodeWorkspaceFile)} ${favorite.label}`,
@@ -91,12 +85,10 @@ function buildQuickPickItems(
         shortcut: `${favCount}`,
         buttons: [REMOVE_FAVORITE_BUTTON],
       });
-      totalCount++;
 
       const worktrees = worktreesByPath.get(workspacePathKey(favorite.path)) ?? [];
       let letter = 0;
       for (const worktree of worktrees) {
-        if (itemLimit !== -1 && totalCount >= itemLimit) break;
         const shortcut = `${favCount}${worktreeSuffix(letter)}`;
         items.push({
           label: `${shortcut} $(git-branch) ${worktree.label}`,
@@ -110,7 +102,6 @@ function buildQuickPickItems(
           buttons: [DELETE_WORKTREE_BUTTON],
         });
         letter++;
-        totalCount++;
       }
       favCount++;
     }
@@ -137,7 +128,7 @@ function buildQuickPickItems(
     });
   } else {
     for (const item of discoveredOnly) {
-      if (itemLimit !== -1 && totalCount >= itemLimit) break;
+      if (itemLimit !== -1 && discoveredCount >= itemLimit) break;
       items.push({
         label: `${item.isWorktree ? '$(git-branch)' : workspaceLabelIcon(item.isCodeWorkspaceFile)} ${item.label}`,
         description: item.path,
@@ -148,11 +139,11 @@ function buildQuickPickItems(
         // Worktrees cannot be favorited, so only offer hiding them.
         buttons: item.isWorktree ? [HIDE_WORKSPACE_BUTTON] : [ADD_FAVORITE_BUTTON, HIDE_WORKSPACE_BUTTON],
       });
-      totalCount++;
+      discoveredCount++;
 
       const worktrees = worktreesByPath.get(workspacePathKey(item.path)) ?? [];
       for (const worktree of worktrees) {
-        if (itemLimit !== -1 && totalCount >= itemLimit) break;
+        if (itemLimit !== -1 && discoveredCount >= itemLimit) break;
         items.push({
           label: `    $(git-branch) ${worktree.label}`,
           description: worktree.path,
@@ -163,7 +154,7 @@ function buildQuickPickItems(
           section: 'worktree',
           buttons: [DELETE_WORKTREE_BUTTON],
         });
-        totalCount++;
+        discoveredCount++;
       }
     }
   }
@@ -176,21 +167,22 @@ function isOpenableItem(item: WorkspaceQuickPickItem | undefined): item is Works
 }
 
 function cleanWorkspaceLabel(label: string): string {
-  return label.trim().replace(/^\d+[a-z]?(?:-\d+)?\s+/, '').replace(/^\$\([^)]+\)\s/, '').trim();
+  return stripSortPadding(label).trim().replace(/^\d+[a-z]?(?:-\d+)?\s+/, '').replace(/^\$\([^)]+\)\s/, '').trim();
 }
 
-// While filtering, VS Code re-sorts matches with shorter labels first, so typing
-// "1" can rank "1b fix" or "10 api" above "1 my-project". Activate the entry whose
-// shortcut exactly matches the typed value so Enter always opens that entry.
-function activateShortcutItem(quickPick: vscode.QuickPick<WorkspaceQuickPickItem>): void {
-  const value = quickPick.value.trim().toLowerCase();
-  if (!value) {
+// Typing a shortcut lists that favorite and its worktrees in list order (1, 1a, 1b,
+// 10, 10a, 11, ...) instead of VS Code's ranking, and activates the exact match so
+// Enter opens it. See padLabelsToKeepOrder for why the labels are padded.
+function renderItems(quickPick: vscode.QuickPick<WorkspaceQuickPickItem>, allItems: WorkspaceQuickPickItem[]): void {
+  const matches = shortcutMatches(allItems, quickPick.value);
+  if (!matches) {
+    quickPick.items = allItems;
     return;
   }
-  const match = quickPick.items.find((item) => item.shortcut === value);
-  if (match) {
-    quickPick.activeItems = [match];
-  }
+  quickPick.items = padLabelsToKeepOrder(matches).map((item) => ({ ...item, alwaysShow: true }));
+  const value = quickPick.value.trim().toLowerCase();
+  const exact = quickPick.items.find((item) => item.shortcut === value);
+  quickPick.activeItems = [exact ?? quickPick.items[0]];
 }
 
 export async function quickOpenWorkspace(
@@ -208,9 +200,21 @@ export async function quickOpenWorkspace(
 
   const quickPick = vscode.window.createQuickPick<WorkspaceQuickPickItem>();
   const itemLimit = vscode.workspace.getConfiguration('jump2x').get<number>('quickPickItemLimit', 20);
+  let allItems: WorkspaceQuickPickItem[] = [];
+  let shortcutMode = false;
+  const render = () => {
+    const wasShortcutMode = shortcutMode;
+    shortcutMode = shortcutMatches(allItems, quickPick.value) !== undefined;
+    // Only rebuild on keystrokes while in (or leaving) shortcut mode; otherwise
+    // VS Code's own filtering handles the typed value.
+    if (shortcutMode || wasShortcutMode) {
+      renderItems(quickPick, allItems);
+    }
+  };
   const setItems = (items: WorkspaceQuickPickItem[]) => {
-    quickPick.items = items;
-    activateShortcutItem(quickPick);
+    allItems = items;
+    shortcutMode = shortcutMatches(allItems, quickPick.value) !== undefined;
+    renderItems(quickPick, allItems);
   };
   setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, true, itemLimit));
   quickPick.placeholder = 'Select a workspace to open (type 1 for a favorite, 1a/1b for its worktrees)';
@@ -316,7 +320,7 @@ export async function quickOpenWorkspace(
     });
 
     quickPick.onDidChangeValue(() => {
-      activateShortcutItem(quickPick);
+      render();
     });
 
     quickPick.onDidChangeSelection((items) => {

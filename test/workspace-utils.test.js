@@ -14,7 +14,7 @@ const {
 } = require('../out/utils/discoveryUtils.js');
 
 test('normalizeWorkspacePath removes trailing separators', () => {
-  assert.equal(normalizeWorkspacePath('C:/Work/demo///'), 'C:\\Work\\demo');
+  assert.equal(normalizeWorkspacePath('C:/Work/demo///', 'win32'), 'C:\\Work\\demo');
 });
 
 test('sameWorkspacePath compares case-insensitively on Windows', () => {
