@@ -4,6 +4,7 @@ import { DiscoveryService } from '../services/discoveryService';
 import { StorageManager } from '../storage/storageManager';
 import { DiscoveredWorkspace, FavoriteWorkspace, HiddenWorkspace, WorktreeInfo } from '../types';
 import { workspacePathKey } from '../utils/pathUtils';
+import { padLabelsToKeepOrder, shortcutMatches, stripSortPadding, worktreeSuffix } from '../utils/shortcutUtils';
 import { confirmAndDeleteWorktree } from './deleteWorktree';
 
 const REMOVE_FAVORITE_BUTTON: vscode.QuickInputButton = {
@@ -38,14 +39,6 @@ interface WorkspaceQuickPickItem extends vscode.QuickPickItem {
 
 function isCodeWorkspacePath(value: string): boolean {
   return value.toLowerCase().endsWith('.code-workspace');
-}
-
-// Maps 0,1,2... to a,b,c... so favorite N's worktrees are Na, Nb, Nc.
-function worktreeSuffix(index: number): string {
-  if (index < 26) {
-    return String.fromCharCode(97 + index);
-  }
-  return `-${index + 1}`;
 }
 
 function workspaceLabelIcon(isCodeWorkspaceFile: boolean): string {
@@ -174,39 +167,22 @@ function isOpenableItem(item: WorkspaceQuickPickItem | undefined): item is Works
 }
 
 function cleanWorkspaceLabel(label: string): string {
-  return label.trim().replace(/^\d+[a-z]?(?:-\d+)?\s+/, '').replace(/^\$\([^)]+\)\s/, '').trim();
+  return stripSortPadding(label).trim().replace(/^\d+[a-z]?(?:-\d+)?\s+/, '').replace(/^\$\([^)]+\)\s/, '').trim();
 }
 
-// Returns the entries whose shortcut starts with the typed value (e.g. "1" -> 1, 1a,
-// 1b, 10, ...), in their original order, or undefined when the value is not a shortcut.
-function shortcutMatches(items: WorkspaceQuickPickItem[], rawValue: string): WorkspaceQuickPickItem[] | undefined {
-  const value = rawValue.trim().toLowerCase();
-  if (!/^\d+[a-z]?(?:-\d*)?$/.test(value)) {
-    return undefined;
-  }
-  const matches = items.filter((item) => item.shortcut?.startsWith(value));
-  return matches.length > 0 ? matches : undefined;
-}
-
-// While filtering, VS Code re-sorts matches with shorter labels first, so typing
-// "1" would rank "1b fix" or "10 api" above "1 my-project". When the value is a
-// shortcut, filter the entries ourselves and turn off label matching: with no label
-// highlights VS Code keeps the given order, so the list reads 1, 1a, 1b, 10, ...
-// The entry whose shortcut exactly matches is made active so Enter opens it.
+// Typing a shortcut lists that favorite and its worktrees in list order (1, 1a, 1b,
+// 10, 10a, 11, ...) instead of VS Code's ranking, and activates the exact match so
+// Enter opens it. See padLabelsToKeepOrder for why the labels are padded.
 function renderItems(quickPick: vscode.QuickPick<WorkspaceQuickPickItem>, allItems: WorkspaceQuickPickItem[]): void {
   const matches = shortcutMatches(allItems, quickPick.value);
-  if (matches) {
-    quickPick.matchOnLabel = false;
-    quickPick.matchOnDescription = false;
-    quickPick.items = matches.map((item) => ({ ...item, alwaysShow: true }));
-    const value = quickPick.value.trim().toLowerCase();
-    const exact = quickPick.items.find((item) => item.shortcut === value);
-    quickPick.activeItems = [exact ?? quickPick.items[0]];
-  } else {
-    quickPick.matchOnLabel = true;
-    quickPick.matchOnDescription = true;
+  if (!matches) {
     quickPick.items = allItems;
+    return;
   }
+  quickPick.items = padLabelsToKeepOrder(matches).map((item) => ({ ...item, alwaysShow: true }));
+  const value = quickPick.value.trim().toLowerCase();
+  const exact = quickPick.items.find((item) => item.shortcut === value);
+  quickPick.activeItems = [exact ?? quickPick.items[0]];
 }
 
 export async function quickOpenWorkspace(
@@ -242,6 +218,7 @@ export async function quickOpenWorkspace(
   };
   setItems(buildQuickPickItems(favorites, discoveredItems, hidden, worktreesByPath, discoveryWarning, true, itemLimit));
   quickPick.placeholder = 'Select a workspace to open (type 1 for a favorite, 1a/1b for its worktrees)';
+  quickPick.matchOnDescription = true;
   quickPick.busy = true;
   quickPick.show();
 

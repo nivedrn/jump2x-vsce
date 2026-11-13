@@ -243,7 +243,7 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test test/workspace-utils.test.js",
+    "test": "npm run compile && node --test test/*.test.js",
     "vscode:prepublish": "npm run compile",
     "release:patch": "npm version patch -m \"chore: release v%s\" && git push && git push --tags",
     "release:minor": "npm version minor -m \"chore: release v%s\" && git push && git push --tags",
